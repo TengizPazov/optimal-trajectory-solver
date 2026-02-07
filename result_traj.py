@@ -338,6 +338,7 @@ class OptimalControlSolver:
             traj = res['trajectory']
             alpha = res['alpha']
 
+            self.alpha = alpha
             t, thrust = self.compute_thrust_profile(traj)
             plt.plot(t, thrust, label=f'α={alpha:.2f}')
 
@@ -373,12 +374,12 @@ if __name__ == "__main__":
 
     solver.set_boundary_conditions(r0, v0, rf, vf, T)
     #alpha_values = np.linspace(0, 0.9, 20)
-    alpha_values = np.linspace(0, 0.9, 5)
+    alpha_values = np.linspace(0, 0.9, 20)
 
-    results = solver.continuation_method(alpha_values, a_max_fixed=0.01)
-
-    solver.plot_trajectories_2d(results, 'continuation_trajectories.png')
-    solver.plot_thrust_profiles(results, 'thrust_profiles.png')
+    results = solver.continuation_method(alpha_values, a_max_fixed=0.1)
+    results_sparse = [results[0], results[-1]]
+    solver.plot_trajectories_2d(results_sparse, 'continuation_trajectories.png')
+    solver.plot_thrust_profiles(results_sparse, 'thrust_profiles.png')
     # Берём решение для alpha = 0
     traj0 = results[0]['trajectory']
 
