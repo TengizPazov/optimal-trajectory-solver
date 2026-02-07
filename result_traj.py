@@ -372,7 +372,8 @@ if __name__ == "__main__":
     T = 2*np.pi*T_a(0.5,1.2)
 
     solver.set_boundary_conditions(r0, v0, rf, vf, T)
-    alpha_values = np.linspace(0, 0.9, 20)
+    #alpha_values = np.linspace(0, 0.9, 20)
+    alpha_values = np.linspace(0, 0.9, 5)
 
     results = solver.continuation_method(alpha_values, a_max_fixed=0.01)
 
