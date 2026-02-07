@@ -291,6 +291,18 @@ class OptimalControlSolver:
             })
 
         return results
+    def compute_thrust_profile(self, trajectory):
+        t = trajectory.t
+        y = trajectory.y
+        thrust = []
+
+        for i in range(len(t)):
+            pv = y[9:12, i]
+            a = self.optimal_control(pv)
+            thrust.append(np.linalg.norm(a))
+
+        return t, np.array(thrust)
+
 
     def plot_trajectories_2d(self, results, filename='trajectories.png'):
         plt.figure(figsize=(10, 8))
@@ -319,6 +331,26 @@ class OptimalControlSolver:
         plt.savefig(filename, dpi=150)
         print(f"График сохранён: {filename}")
         plt.close()
+    def plot_thrust_profiles(self, results, filename='thrust_profiles.png'):
+        plt.figure(figsize=(10, 6))
+
+        for res in results:
+            traj = res['trajectory']
+            alpha = res['alpha']
+
+            t, thrust = self.compute_thrust_profile(traj)
+            plt.plot(t, thrust, label=f'α={alpha:.2f}')
+
+        plt.xlabel('t')
+        plt.ylabel('|a(t)|')
+        plt.title('Профиль тяги при разных α')
+        plt.grid(True)
+        plt.legend()
+        plt.tight_layout()
+        plt.savefig(filename, dpi=150)
+        print(f"График сохранён: {filename}")
+        plt.close()
+
 
 
 # пример
@@ -345,3 +377,5 @@ if __name__ == "__main__":
     results = solver.continuation_method(alpha_values, a_max_fixed=0.5)
 
     solver.plot_trajectories_2d(results, 'continuation_trajectories.png')
+    solver.plot_thrust_profiles(results, 'thrust_profiles.png')
+
