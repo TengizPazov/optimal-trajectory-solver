@@ -334,7 +334,8 @@ if __name__ == "__main__":
     v0 = np.array([0.0, 1.0, 0.0])
 
     rf = np.array([-1.2, 0.0, 0.0])
-    vf = np.array([0.0, -np.sqrt(0.7), 0.0])
+    vf = np.array([0.0, -1/np.sqrt(1.2), 0.0])
+
 
     T = 2*np.pi*T_a(0.5,1.2)
 
