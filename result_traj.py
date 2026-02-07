@@ -273,7 +273,7 @@ class OptimalControlSolver:
 
         return result
 
-    def continuation_method(self, alpha_values, p0_initial=None, a_max_fixed=0.3):
+    def continuation_method(self, alpha_values, p0_initial=None, a_max_fixed=0.01):
         self.a_max = a_max_fixed
 
         results = []
@@ -374,8 +374,16 @@ if __name__ == "__main__":
     solver.set_boundary_conditions(r0, v0, rf, vf, T)
     alpha_values = np.linspace(0, 0.9, 20)
 
-    results = solver.continuation_method(alpha_values, a_max_fixed=0.5)
+    results = solver.continuation_method(alpha_values, a_max_fixed=0.01)
 
     solver.plot_trajectories_2d(results, 'continuation_trajectories.png')
     solver.plot_thrust_profiles(results, 'thrust_profiles.png')
+    # Берём решение для alpha = 0
+    traj0 = results[0]['trajectory']
+
+    pv = traj0.y[9:12]
+    pv_norm = np.linalg.norm(pv, axis=0)
+
+    print("Минимальное значение |p_v| при alpha=0:", np.min(pv_norm))
+    print("Максимальное значение |p_v| при alpha=0:", np.max(pv_norm))
 
