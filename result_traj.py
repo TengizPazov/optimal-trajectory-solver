@@ -184,6 +184,10 @@ class OptimalControlSolver:
             a = self.a_max * pv / pv_norm if pv_norm > 1e-15 else np.zeros(3)
 
         elif self.func_type == 'mixed':
+
+            if self.alpha > 0.95: 
+                return self.a_max * pv / pv_norm if pv_norm > 1e-12 else np.zeros(3)
+
             if abs(self.alpha) < 1e-10:
                 a = pv
             elif abs(self.alpha - 1.0) < 1e-10:
@@ -224,9 +228,10 @@ class OptimalControlSolver:
             self.system_equations,
             t_span,
             y0,
-            method='LSODA',
-            rtol=1e-8,
-            atol=1e-10
+            method='RK45',
+            rtol=1e-9,
+            atol=1e-12,
+            max_step = 1e-3
         )
         return sol
 
@@ -239,7 +244,7 @@ class OptimalControlSolver:
             self.system_equations,
             [0, self.T],
             y0,
-            method='LSODA',
+            method='RK45',
             rtol=1e-8,
             atol=1e-10
         )
@@ -253,13 +258,13 @@ class OptimalControlSolver:
         else:
             return 1e6
 
-    def solve(self, p0_guess=None, method='Nelder-Mead', options=None):
+    def solve(self, p0_guess=None, method='SLSQP', options=None):
         if p0_guess is None:
             pr_0, pv_0 = get_initial_adjoint(0.5, 1.2)
             p0_guess = np.hstack((pr_0, pv_0))
 
         if options is None:
-            options = {'disp': False, 'maxiter': 40}
+            options = {'disp': False, 'maxiter': 300}
 
         result = minimize(
             self.loss,
@@ -388,4 +393,3 @@ if __name__ == "__main__":
 
     print("Минимальное значение |p_v| при alpha=0:", np.min(pv_norm))
     print("Максимальное значение |p_v| при alpha=0:", np.max(pv_norm))
-
