@@ -238,15 +238,20 @@ class OptimalControlSolver:
     def loss(self, x):
         pr0 = x[0:3]
         pv0 = x[3:6]
+        a_max = np.clip(x[6], 1e-4, 1.0)
+
+        self.a_max = a_max
 
         y0 = np.concatenate([self.r0, self.v0, pr0, pv0])
+
         sol = solve_ivp(
             self.system_equations,
             [0, self.T],
             y0,
             method='RK45',
             rtol=1e-8,
-            atol=1e-10
+            atol=1e-10,
+            max_step=1e-3
         )
 
         if sol.success:
@@ -258,13 +263,14 @@ class OptimalControlSolver:
         else:
             return 1e6
 
-    def solve(self, p0_guess=None, method='SLSQP', options=None):
+
+    def solve(self, p0_guess=None, method='Powell', options=None):
         if p0_guess is None:
             pr_0, pv_0 = get_initial_adjoint(0.5, 1.2)
-            p0_guess = np.hstack((pr_0, pv_0))
+            p0_guess = np.hstack((pr_0, pv_0, 0.1))  # добавили a_max
 
         if options is None:
-            options = {'disp': False, 'maxiter': 300}
+            options = {'disp': False, 'maxiter': 80}
 
         result = minimize(
             self.loss,
@@ -273,29 +279,41 @@ class OptimalControlSolver:
             options=options
         )
 
-        self.p0 = result.x
-        self.trajectory = self.integrate_trajectory(self.p0)
+        # читаем оптимальные параметры
+        pr0 = result.x[0:3]
+        pv0 = result.x[3:6]
+        a_max = np.clip(result.x[6], 1e-4, 1.0)
 
+        self.a_max = a_max
+        self.p0 = np.hstack((pr0, pv0))
+
+        self.trajectory = self.integrate_trajectory(self.p0)
         return result
 
-    def continuation_method(self, alpha_values, p0_initial=None, a_max_fixed=0.01):
-        self.a_max = a_max_fixed
 
+    def continuation_method(self, alpha_values, p0_initial=None, a_max_fixed=None):
         results = []
         current_p0 = p0_initial
 
         for alpha in alpha_values:
             self.alpha = alpha
+            print(f"α = {alpha:.3f}")
+
             result = self.solve(current_p0)
 
-            current_p0 = self.p0.copy()
+            print(f"Найдено a_max = {self.a_max:.6f}")
+
+            current_p0 = np.hstack((self.p0, self.a_max))
 
             results.append({
                 'alpha': alpha,
-                'trajectory': self.trajectory
+                'trajectory': self.trajectory,
+                'a_max': self.a_max
             })
 
+
         return results
+
     def compute_thrust_profile(self, trajectory):
         t = trajectory.t
         y = trajectory.y
@@ -379,9 +397,9 @@ if __name__ == "__main__":
 
     solver.set_boundary_conditions(r0, v0, rf, vf, T)
     #alpha_values = np.linspace(0, 0.9, 20)
-    alpha_values = np.linspace(0, 0.9, 20)
+    alpha_values = np.linspace(0, 1.0, 20)
 
-    results = solver.continuation_method(alpha_values, a_max_fixed=0.1)
+    results = solver.continuation_method(alpha_values)
     results_sparse = [results[0], results[-1]]
     solver.plot_trajectories_2d(results_sparse, 'continuation_trajectories.png')
     solver.plot_thrust_profiles(results_sparse, 'thrust_profiles.png')
