@@ -2,7 +2,7 @@ import numpy as np
 import math
 import logging
 from scipy.integrate import solve_ivp
-from scipy.optimize import minimize
+from scipy.optimize import minimize, least_squares
 import matplotlib.pyplot as plt
 from approximations import T_a, get_initial_adjoint
 
@@ -38,7 +38,7 @@ class OptimalControlSolver:
 
         elif self.func_type == 'mixed':
 
-            if self.alpha > 0.95: 
+            if self.alpha > 0.95:
                 return self.a_max * pv / pv_norm if pv_norm > 1e-12 else np.zeros(3)
 
             if abs(self.alpha) < 1e-10:
@@ -81,13 +81,13 @@ class OptimalControlSolver:
             self.system_equations,
             t_span,
             y0,
-            method='RK45',
+            method='LSODA',
             rtol=1e-9,
             atol=1e-12,
-            max_step = 1e-3
         )
         return sol
 
+    
     def loss(self, x):
         pr0 = x[0:3]
         pv0 = x[3:6]
@@ -101,10 +101,9 @@ class OptimalControlSolver:
             self.system_equations,
             [0, self.T],
             y0,
-            method='RK45',
+            method='LSODA',
             rtol=1e-8,
             atol=1e-10,
-            max_step=1e-3
         )
 
         if sol.success:
@@ -113,55 +112,153 @@ class OptimalControlSolver:
             r_res = self.rf - rf
             v_res = self.vf - vf
             residual = np.linalg.norm(np.hstack((r_res, v_res)))
-            
-            # Логгирование значений на каждом шаге
+
             logger.info(f"Невязка: {residual:.6f}, pr_0: [{pr0[0]:.6f}, {pr0[1]:.6f}, {pr0[2]:.6f}], "
                         f"pv_0: [{pv0[0]:.6f}, {pv0[1]:.6f}, {pv0[2]:.6f}], a_max: {a_max:.6f}")
-            
+
             return residual
         else:
             return 1e6
 
+    # векторная невязка
+    def residual_vec(self, x):
+        pr0 = x[0:3]
+        pv0 = x[3:6]
+        a_max = np.clip(x[6], 1e-4, 1.0)
+        self.a_max = a_max
 
-    def solve(self, p0_guess=None, method='Nelder-Mead', options=None):
+        y0 = np.concatenate([self.r0, self.v0, pr0, pv0])
+        sol = solve_ivp(
+            self.system_equations,
+            [0, self.T],
+            y0,
+            method='LSODA',
+            rtol=1e-9,
+            atol=1e-12,
+        )
+
+        if not sol.success:
+            logger.info("solve_ivp не сошёлся")
+            return np.ones(6) * 1e3
+
+        rf = sol.y[0:3, -1]
+        vf = sol.y[3:6, -1]
+
+        r_res = self.rf - rf
+        v_res = self.vf - vf
+        res = np.hstack((r_res, v_res))
+
+        res_norm = np.linalg.norm(res)
+        logger.info(f"Невязка: {res_norm:.6e}, pr0={pr0}, pv0={pv0}, a_max={a_max:.6f}")
+
+        return res
+
+    def solve(self, p0_guess=None, method='SLSQP', options=None):
+        #α = 0
+        if abs(self.alpha) < 1e-12:
+            self.a_max = 0.01
+            logger.info("α = 0 a_max фиксирован = 0.01")
+
+            if p0_guess is None:
+                pr0, pv0 = get_initial_adjoint(0.5, 1.2)
+                p0_guess = np.hstack((pr0, pv0))
+
+            def loss_alpha0(x):
+                pr0 = x[0:3]
+                pv0 = x[3:6]
+
+                y0 = np.concatenate([self.r0, self.v0, pr0, pv0])
+                sol = solve_ivp(
+                    self.system_equations,
+                    [0, self.T],
+                    y0,
+                    method='LSODA',
+                    rtol=1e-9,
+                    atol=1e-12,
+                )
+
+                rf = sol.y[0:3, -1]
+                vf = sol.y[3:6, -1]
+                res = np.hstack((rf - self.rf, vf - self.vf))
+                res_norm = np.linalg.norm(res)
+
+                logger.info(f"[α=0] Невязка: {res_norm:.6e}, "
+                            f"pr0={pr0}, pv0={pv0}")
+
+                return res_norm
+
+            result = minimize(
+                loss_alpha0,
+                p0_guess,
+                method=method,
+                options={'disp': True, 'maxiter': 200}
+            )
+
+            pr0 = result.x[0:3]
+            pv0 = result.x[3:6]
+            self.p0 = np.hstack((pr0, pv0))
+            self.trajectory = self.integrate_trajectory(self.p0)
+
+            logger.info(f"[α=0] Итоговое pr0={pr0}, pv0={pv0}, a_max=0.01\n")
+            return result
+
+        # общий случай
         if p0_guess is None:
             pr_0, pv_0 = get_initial_adjoint(0.5, 1.2)
             a_max_0 = np.linalg.norm(pv_0)
-            p0_guess = np.hstack((pr_0, pv_0, a_max_0))  # добавили a_max
+            p0_guess = np.hstack((pr_0, pv_0, a_max_0))
 
-        if options is None:
-            options = {'disp': False, 'maxiter': 80}
+        logger.info(f"\n=== ШАГ α = {self.alpha:.3f} оптимизируем pr0, pv0, a_max ===")
 
-        result = minimize(
-            self.loss,
+        result = least_squares(
+            self.residual_vec,
             p0_guess,
-            method=method,
-            options=options
+            method='trf',
+            xtol=1e-10,
+            ftol=1e-10,
+            gtol=1e-10,
+            max_nfev=200,
         )
 
-        # читаем оптимальные параметры
         pr0 = result.x[0:3]
         pv0 = result.x[3:6]
         a_max = np.clip(result.x[6], 1e-4, 1.0)
 
         self.a_max = a_max
         self.p0 = np.hstack((pr0, pv0))
-
         self.trajectory = self.integrate_trajectory(self.p0)
-        return result
 
+        logger.info(f"[α={self.alpha:.3f}] Итоговое pr0={pr0}, pv0={pv0}, a_max={a_max:.6f}\n")
+
+        return result
 
     def continuation_method(self, alpha_values, p0_initial=None, a_max_fixed=None):
         results = []
         current_p0 = p0_initial
 
-        for alpha in alpha_values:
+        alphas = list(alpha_values)
+        i = 0
+        while i < len(alphas):
+            alpha = alphas[i]
             self.alpha = alpha
             print(f"α = {alpha:.3f}")
 
             result = self.solve(current_p0)
 
-            print(f"Найдено a_max = {self.a_max:.6f}")
+            # оцениваем невязку для текущего решения
+            x_full = np.hstack((self.p0, self.a_max))
+            err = np.linalg.norm(self.residual_vec(x_full))
+
+            if err > 1e-2 and i > 0:
+                # шаг слишком большой
+                prev_alpha = alphas[i - 1]
+                if abs(alpha - prev_alpha) > 1e-3:
+                    mid = 0.5 * (alpha + prev_alpha)
+                    print(f" невязка {err:.3e} большая")
+                    alphas.insert(i, mid)
+                    continue
+
+            print(f"Найдено a_max = {self.a_max:.6f}, невязка = {err:.3e}")
 
             current_p0 = np.hstack((self.p0, self.a_max))
 
@@ -171,6 +268,7 @@ class OptimalControlSolver:
                 'a_max': self.a_max
             })
 
+            i += 1
 
         return results
 
@@ -185,7 +283,6 @@ class OptimalControlSolver:
             thrust.append(np.linalg.norm(a))
 
         return t, np.array(thrust)
-
 
     def plot_trajectories_2d(self, results, filename='trajectories.png'):
         plt.figure(figsize=(10, 8))
@@ -214,6 +311,7 @@ class OptimalControlSolver:
         plt.savefig(filename, dpi=150)
         print(f"График сохранён: {filename}")
         plt.close()
+
     def plot_thrust_profiles(self, results, filename='thrust_profiles.png'):
         plt.figure(figsize=(10, 6))
 
@@ -236,7 +334,6 @@ class OptimalControlSolver:
         plt.close()
 
 
-
 # пример
 if __name__ == "__main__":
     solver = OptimalControlSolver(
@@ -252,17 +349,17 @@ if __name__ == "__main__":
     rf = np.array([-1.2, 0.0, 0.0])
     vf = np.array([0.0, -1/np.sqrt(1.2), 0.0])
 
-
-    T = 2*np.pi*T_a(0.5,1.2)
+    T = 2*np.pi*T_a(0.5, 1.2)
 
     solver.set_boundary_conditions(r0, v0, rf, vf, T)
-    #alpha_values = np.linspace(0, 0.9, 20)
-    alpha_values = np.linspace(0, 1.0, 20)
+
+    alpha_values = np.linspace(0, 0.9, 100)
 
     results = solver.continuation_method(alpha_values)
     results_sparse = [results[0], results[-1]]
     solver.plot_trajectories_2d(results_sparse, 'continuation_trajectories.png')
     solver.plot_thrust_profiles(results_sparse, 'thrust_profiles.png')
+
     # Берём решение для alpha = 0
     traj0 = results[0]['trajectory']
 
