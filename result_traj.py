@@ -236,41 +236,60 @@ class OptimalControlSolver:
         results = []
         current_p0 = p0_initial
 
-        alphas = list(alpha_values)
-        i = 0
-        while i < len(alphas):
-            alpha = alphas[i]
-            self.alpha = alpha
-            print(f"α = {alpha:.3f}")
+        targets = list(alpha_values)
+        if not targets:
+            return results
 
-            result = self.solve(current_p0)
+        self.alpha = targets[0]
+        result0 = self.solve(current_p0)
+        x_full = np.hstack((self.p0, self.a_max))
+        err0 = np.linalg.norm(self.residual_vec(x_full))
 
-            # оцениваем невязку для текущего решения
-            x_full = np.hstack((self.p0, self.a_max))
-            err = np.linalg.norm(self.residual_vec(x_full))
+        current_p0 = np.hstack((self.p0, self.a_max))
+        results.append({
+            'alpha': self.alpha,
+            'trajectory': self.trajectory,
+            'a_max': self.a_max
+        })
 
-            if err > 1e-2 and i > 0:
-                # шаг слишком большой
-                prev_alpha = alphas[i - 1]
-                if abs(alpha - prev_alpha) > 1e-3:
-                    mid = 0.5 * (alpha + prev_alpha)
-                    print(f" невязка {err:.3e} большая")
-                    alphas.insert(i, mid)
+        alpha_prev = targets[0]
+
+        for alpha_target in targets[1:]:
+            alpha_curr = alpha_prev
+            max_refine = 20
+            refine_count = 0
+            while True:
+                step = alpha_target - alpha_curr
+                if abs(step) < 1e-6 or refine_count >= max_refine:
+                    self.alpha = alpha_target
+                    result = self.solve(current_p0)
+                    x_full = np.hstack((self.p0, self.a_max))
+                    err = np.linalg.norm(self.residual_vec(x_full))
+                    current_p0 = np.hstack((self.p0, self.a_max))
+                    results.append({
+                        'alpha': self.alpha,
+                        'trajectory': self.trajectory,
+                        'a_max': self.a_max
+                    })
+                    alpha_prev = alpha_target
+                    break
+
+                self.alpha = alpha_curr + step
+                result = self.solve(current_p0)
+                x_full = np.hstack((self.p0, self.a_max))
+                err = np.linalg.norm(self.residual_vec(x_full))
+
+                if err > 1e-2 and abs(step) > 1e-3:
+                    alpha_curr = alpha_curr + 0.5 * step
+                    refine_count += 1
+                    continue
+                else:
+                    current_p0 = np.hstack((self.p0, self.a_max))
+                    alpha_curr = self.alpha
                     continue
 
-            print(f"Найдено a_max = {self.a_max:.6f}, невязка = {err:.3e}")
-
-            current_p0 = np.hstack((self.p0, self.a_max))
-
-            results.append({
-                'alpha': alpha,
-                'trajectory': self.trajectory,
-                'a_max': self.a_max
-            })
-
-            i += 1
-
         return results
+
 
     def compute_thrust_profile(self, trajectory):
         t = trajectory.t
@@ -353,7 +372,7 @@ if __name__ == "__main__":
 
     solver.set_boundary_conditions(r0, v0, rf, vf, T)
 
-    alpha_values = np.linspace(0, 0.9, 100)
+    alpha_values = np.linspace(0, 1, 100)
 
     results = solver.continuation_method(alpha_values)
     results_sparse = [results[0], results[-1]]
