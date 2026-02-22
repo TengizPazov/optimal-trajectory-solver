@@ -6,14 +6,10 @@ from scipy.optimize import minimize, least_squares
 import matplotlib.pyplot as plt
 from approximations import T_a, get_initial_adjoint
 
-# Настройка логгирования
 logging.basicConfig(level=logging.INFO, format='%(message)s')
 logger = logging.getLogger(__name__)
 
 class OptimalControlSolver:
-    '''
-    Сlass for solving the optimal control problem using the sighting method
-    '''
     def __init__(self, mu: float, a_max: float, alpha: float, func_type):
         self.mu = mu
         self.a_max = a_max
@@ -29,32 +25,48 @@ class OptimalControlSolver:
 
     def optimal_control(self, pv):
         pv_norm = np.linalg.norm(pv)
+        eps = 1e-8
 
         if self.func_type == 'quadratic':
-            a = pv
+            return pv
 
         elif self.func_type == 'linear':
-            a = self.a_max * pv / pv_norm if pv_norm > 1e-15 else np.zeros(3)
+            if pv_norm < eps:
+                return np.zeros(3)
+            return self.a_max * pv / pv_norm
 
         elif self.func_type == 'mixed':
 
-            if self.alpha > 0.95:
-                return self.a_max * pv / pv_norm if pv_norm > 1e-12 else np.zeros(3)
+            if pv_norm < eps:
+                return np.zeros(3)
+            if abs(self.alpha) < 1e-12:
+                return pv
 
-            if abs(self.alpha) < 1e-10:
-                a = pv
-            elif abs(self.alpha - 1.0) < 1e-10:
-                a = self.a_max * pv / pv_norm if pv_norm > 1e-10 else np.zeros(3)
-            else:
-                if pv_norm <= self.alpha:
-                    a = np.zeros(3)
-                else:
-                    a = ((pv_norm - self.alpha) / (1 - self.alpha)) * (pv / pv_norm)
-                    a_norm = np.linalg.norm(a)
-                    if a_norm > self.a_max:
-                        a = (self.a_max / a_norm) * a
+            #сглаживание
+            if abs(self.alpha - 1.0) < 1e-12:
+                smooth_eps = 1e-3
+                x = pv_norm - (1 - smooth_eps)
+                smooth = 0.5 * (x + np.sqrt(x**2 + smooth_eps**2))
+                scale = np.clip(smooth / smooth_eps, 0.0, 1.0)
+                a = scale * (pv / pv_norm)
 
-        return a
+                a_norm = np.linalg.norm(a)
+                if a_norm > self.a_max:
+                    a = self.a_max * a / a_norm
+                return a
+
+            x = pv_norm - self.alpha
+            smooth = 0.5 * (x + np.sqrt(x**2 + 1e-6))
+            scale = smooth / (1 - self.alpha)
+            scale = np.clip(scale, 0.0, 1.0)
+
+            a = scale * (pv / pv_norm)
+            a_norm = np.linalg.norm(a)
+            if a_norm > self.a_max:
+                a = self.a_max * a / a_norm
+
+            return a
+
 
     def system_equations(self, t, y):
         r = y[0:3]
@@ -87,7 +99,6 @@ class OptimalControlSolver:
         )
         return sol
 
-    
     def loss(self, x):
         pr0 = x[0:3]
         pv0 = x[3:6]
@@ -113,14 +124,11 @@ class OptimalControlSolver:
             v_res = self.vf - vf
             residual = np.linalg.norm(np.hstack((r_res, v_res)))
 
-            logger.info(f"Невязка: {residual:.6f}, pr_0: [{pr0[0]:.6f}, {pr0[1]:.6f}, {pr0[2]:.6f}], "
-                        f"pv_0: [{pv0[0]:.6f}, {pv0[1]:.6f}, {pv0[2]:.6f}], a_max: {a_max:.6f}")
-
+            logger.info(f"Невязка: {residual:.6f}, pr_0: {pr0}, pv_0: {pv0}, a_max: {a_max:.6f}")
             return residual
         else:
             return 1e6
 
-    # векторная невязка
     def residual_vec(self, x):
         pr0 = x[0:3]
         pv0 = x[3:6]
@@ -154,7 +162,6 @@ class OptimalControlSolver:
         return res
 
     def solve(self, p0_guess=None, method='SLSQP', options=None):
-        #α = 0
         if abs(self.alpha) < 1e-12:
             self.a_max = 0.01
             logger.info("α = 0 a_max фиксирован = 0.01")
@@ -182,9 +189,7 @@ class OptimalControlSolver:
                 res = np.hstack((rf - self.rf, vf - self.vf))
                 res_norm = np.linalg.norm(res)
 
-                logger.info(f"[α=0] Невязка: {res_norm:.6e}, "
-                            f"pr0={pr0}, pv0={pv0}")
-
+                logger.info(f"[α=0] Невязка: {res_norm:.6e}, pr0={pr0}, pv0={pv0}")
                 return res_norm
 
             result = minimize(
@@ -202,7 +207,6 @@ class OptimalControlSolver:
             logger.info(f"[α=0] Итоговое pr0={pr0}, pv0={pv0}, a_max=0.01\n")
             return result
 
-        # общий случай
         if p0_guess is None:
             pr_0, pv_0 = get_initial_adjoint(0.5, 1.2)
             a_max_0 = np.linalg.norm(pv_0)
@@ -289,7 +293,6 @@ class OptimalControlSolver:
                     continue
 
         return results
-
 
     def compute_thrust_profile(self, trajectory):
         t = trajectory.t
@@ -379,9 +382,7 @@ if __name__ == "__main__":
     solver.plot_trajectories_2d(results_sparse, 'continuation_trajectories.png')
     solver.plot_thrust_profiles(results_sparse, 'thrust_profiles.png')
 
-    # Берём решение для alpha = 0
     traj0 = results[0]['trajectory']
-
     pv = traj0.y[9:12]
     pv_norm = np.linalg.norm(pv, axis=0)
 
