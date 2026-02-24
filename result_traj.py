@@ -328,11 +328,30 @@ if __name__ == "__main__":
         print(f"α = {res['alpha']:.3f}, a_max = {res['a_max']:.6f}")
 
     if results:
-        step = max(1, len(results) // 10)
-        plot_results = results[::step]
+        # Задаём список желаемых значений альфа
+        desired_alphas = [0.0, 0.5, 1.0]  # можно изменить или дополнить
+        
+        # Находим ближайшие решения к каждому желаемому значению
+        plot_results = []
+        for da in desired_alphas:
+            # Ищем индекс с минимальной разницей по alpha
+            idx = np.argmin([abs(r['alpha'] - da) for r in results])
+            # Добавляем решение, если оно ещё не добавлено (на случай совпадения)
+            if results[idx] not in plot_results:
+                plot_results.append(results[idx])
+        
+        # Если хотим гарантированно получить ровно 3-4 решения,
+        # можно также добавить самое первое (α=0) и последнее (макс. α), если их нет
+        if results[0] not in plot_results:
+            plot_results.insert(0, results[0])          # α=0 точно есть
+        if results[-1] not in plot_results:
+            plot_results.append(results[-1])             # последнее (возможно α≈1)
+
+        # Теперь строим графики только для отобранных решений
         solver.plot_trajectories_2d(plot_results, 'continuation_trajectories.png')
         solver.plot_thrust_profiles(plot_results, 'thrust_profiles.png')
 
+        # Дополнительно выводим информацию для α=0
         traj0 = results[0]['trajectory']
         pv = traj0.y[9:12]
         pv_norm = np.linalg.norm(pv, axis=0)
