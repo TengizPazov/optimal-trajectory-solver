@@ -138,6 +138,7 @@ class OptimalControlSolver:
             a_max_0 = max(np.linalg.norm(pv0), 0.1)
             p0_guess = np.hstack((pr0, pv0, a_max_0))
 
+        # Границы: pr0, pv0 не ограничены; a_max ∈ [1e-4, 1.0]
         bounds = ([-np.inf] * 6 + [1e-4], [np.inf] * 6 + [1.0])
 
         result = least_squares(
@@ -175,7 +176,7 @@ class OptimalControlSolver:
                             h_max=0.2,
                             p0_initial=None):
         """
-        Адаптивный метод продолжения по параметру alpha
+        Адаптивный метод продолжения по параметру alpha (Hamada–Maruta style).
         Возвращает список словарей с ключами 'alpha', 'trajectory', 'a_max'.
         """
         results = []
@@ -195,6 +196,9 @@ class OptimalControlSolver:
         err = np.linalg.norm(self.residual_vec(x_full))
         if err > tol:
             logger.warning(f"Начальное решение имеет большую невязку {err:.6e} > {tol}")
+            # Можно попробовать уменьшить допуск или выйти
+            # Но продолжим, возможно, дальше подправится
+
         results.append({
             'alpha': alpha,
             'trajectory': self.trajectory,
@@ -324,20 +328,11 @@ if __name__ == "__main__":
         print(f"α = {res['alpha']:.3f}, a_max = {res['a_max']:.6f}")
 
     if results:
-        desired_alphas = [0.0, 0.5, 1.0]
-
-        plot_results = []
-        for da in desired_alphas:
-            idx = np.argmin([abs(r['alpha'] - da) for r in results])
-            if results[idx] not in plot_results:
-                plot_results.append(results[idx])
-        if results[0] not in plot_results:
-            plot_results.insert(0, results[0])
-        if results[-1] not in plot_results:
-            plot_results.append(results[-1])
-
+        step = max(1, len(results) // 3)
+        plot_results = results[::step]
         solver.plot_trajectories_2d(plot_results, 'continuation_trajectories.png')
         solver.plot_thrust_profiles(plot_results, 'thrust_profiles.png')
+
         traj0 = results[0]['trajectory']
         pv = traj0.y[9:12]
         pv_norm = np.linalg.norm(pv, axis=0)
