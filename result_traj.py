@@ -138,7 +138,6 @@ class OptimalControlSolver:
             a_max_0 = max(np.linalg.norm(pv0), 0.1)
             p0_guess = np.hstack((pr0, pv0, a_max_0))
 
-        # Границы: pr0, pv0 не ограничены; a_max ∈ [1e-4, 1.0]
         bounds = ([-np.inf] * 6 + [1e-4], [np.inf] * 6 + [1.0])
 
         result = least_squares(
@@ -176,7 +175,7 @@ class OptimalControlSolver:
                             h_max=0.2,
                             p0_initial=None):
         """
-        Адаптивный метод продолжения по параметру alpha (Hamada–Maruta style).
+        Адаптивный метод продолжения по параметру alpha
         Возвращает список словарей с ключами 'alpha', 'trajectory', 'a_max'.
         """
         results = []
@@ -196,9 +195,6 @@ class OptimalControlSolver:
         err = np.linalg.norm(self.residual_vec(x_full))
         if err > tol:
             logger.warning(f"Начальное решение имеет большую невязку {err:.6e} > {tol}")
-            # Можно попробовать уменьшить допуск или выйти
-            # Но продолжим, возможно, дальше подправится
-
         results.append({
             'alpha': alpha,
             'trajectory': self.trajectory,
