@@ -40,31 +40,20 @@ class OptimalControlSolver:
                 return np.zeros(3)
             
             if abs(self.alpha) < 1e-12:
-                return pv
-
-            if abs(self.alpha - 1.0) < 1e-12:
-                smooth_eps = 1e-3
-                x = pv_norm - (1 - smooth_eps)
-                smooth = 0.5 * (x + np.sqrt(x**2 + smooth_eps**2))
-                scale = np.clip(smooth / smooth_eps, 0.0, 1.0)
-                a = scale * (pv / pv_norm)
-                # Ограничение по a_max
-                a_norm = np.linalg.norm(a)
-                if a_norm > self.a_max:
-                    a = self.a_max * a / a_norm
-                return a
-
-            x = pv_norm - self.alpha
-            smooth = 0.5 * (x + np.sqrt(x**2 + 1e-6))
-            scale = smooth / (1 - self.alpha)
-            scale = np.clip(scale, 0.0, 1.0)
-
-            a = scale * (pv / pv_norm)
-            a_norm = np.linalg.norm(a)
-            if a_norm > self.a_max:
-                a = self.a_max * a / a_norm
+                a = pv
+            elif abs(self.alpha - 1.0) < 1e-12:
+                a = self.a_max * pv / pv_norm if pv_norm > 1e-12 else np.zeros(3)
+            else:
+                if pv_norm <= self.alpha:
+                    a = np.zeros(3)
+                else:
+                    a = ((pv_norm - self.alpha) / (1 - self.alpha)) * (pv / pv_norm)
+                    a_norm = np.linalg.norm(a)
+                    if a_norm > self.a_max:
+                        a = (self.a_max / a_norm) * a
 
             return a
+
 
     def system_equations(self, t, y):
         r = y[0:3]
@@ -328,8 +317,7 @@ if __name__ == "__main__":
         print(f"α = {res['alpha']:.3f}, a_max = {res['a_max']:.6f}")
 
     if results:
-        step = max(1, len(results) // 3)
-        plot_results = results[::step]
+        plot_results = [results[0], results[-1]]
         solver.plot_trajectories_2d(plot_results, 'continuation_trajectories.png')
         solver.plot_thrust_profiles(plot_results, 'thrust_profiles.png')
 
