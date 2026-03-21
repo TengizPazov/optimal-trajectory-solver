@@ -54,7 +54,6 @@ class OptimalControlSolver:
 
             return a
 
-
     def system_equations(self, t, y):
         r = y[0:3]
         v = y[3:6]
@@ -317,7 +316,7 @@ if __name__ == "__main__":
         print(f"α = {res['alpha']:.3f}, a_max = {res['a_max']:.6f}")
 
     if results:
-        plot_results = [results[0], results[-1]]
+        plot_results = [results[0], results[-2]]
         solver.plot_trajectories_2d(plot_results, 'continuation_trajectories.png')
         solver.plot_thrust_profiles(plot_results, 'thrust_profiles.png')
 
