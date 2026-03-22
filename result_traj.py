@@ -291,14 +291,14 @@ if __name__ == "__main__":
         alpha=0.0,
         func_type='mixed'
     )
-
+    kappa = 1.5
     r0 = np.array([1.0, 0.0, 0.0])
     v0 = np.array([0.0, 1.0, 0.0])
 
-    rf = np.array([-1.2, 0.0, 0.0])
-    vf = np.array([0.0, -1/np.sqrt(1.2), 0.0])
+    rf = np.array([-kappa, 0.0, 0.0])
+    vf = np.array([0.0, -1/np.sqrt(kappa), 0.0])
 
-    T = 2 * np.pi * T_a(0.5, 1.2)
+    T = 2 * np.pi * T_a(0.5, kappa)
     solver.set_boundary_conditions(r0, v0, rf, vf, T)
 
     results = solver.continuation_method(
