@@ -172,6 +172,11 @@ class OptimalControlSolver:
         h = h_init
         current_guess = p0_initial
 
+        # --- история ---
+        self.alpha_history = []
+        self.h_history = []
+        self.err_history = []
+
         # Первый шаг (alpha = alpha_start)
         self.alpha = alpha
         res = self.solve(current_guess)
@@ -182,10 +187,14 @@ class OptimalControlSolver:
         # Вычисляем невязку
         x_full = np.hstack((self.p0, self.a_max))
         err = np.linalg.norm(self.residual_vec(x_full))
+
+        # сохраняем
+        self.alpha_history.append(alpha)
+        self.h_history.append(h)
+        self.err_history.append(err)
+
         if err > tol:
             logger.warning(f"Начальное решение имеет большую невязку {err:.6e} > {tol}")
-            # Можно попробовать уменьшить допуск или выйти
-            # Но продолжим, возможно, дальше подправится
 
         results.append({
             'alpha': alpha,
@@ -195,19 +204,16 @@ class OptimalControlSolver:
         current_guess = np.hstack((self.p0, self.a_max))
 
         while alpha < alpha_end - 1e-12:
-            # Предлагаем новый alpha
             alpha_next = min(alpha + h, alpha_end)
 
-            # Пробуем решить для alpha_next
             self.alpha = alpha_next
             res = self.solve(current_guess)
 
             if self.trajectory is not None and res.success:
-                # Проверяем невязку
                 x_full = np.hstack((self.p0, self.a_max))
                 err = np.linalg.norm(self.residual_vec(x_full))
+
                 if err <= tol:
-                    #сохраняем и увеличиваем шаг
                     results.append({
                         'alpha': alpha_next,
                         'trajectory': self.trajectory,
@@ -216,16 +222,26 @@ class OptimalControlSolver:
                     alpha = alpha_next
                     current_guess = np.hstack((self.p0, self.a_max))
                     h = min(h * 1.5, h_max)
+
+                    # сохраняем
+                    self.alpha_history.append(alpha)
+                    self.h_history.append(h)
+                    self.err_history.append(err)
+
                     logger.info(f"Шаг успешен, новый alpha = {alpha:.4f}, h = {h:.4f}")
                     continue
 
-            # Если не получилось – уменьшаем шаг и пробуем снова для того же alpha
             h = max(h * 0.5, h_min)
             logger.info(f"Неудача, уменьшаем шаг до {h:.6f}")
 
             if h < h_min - 1e-12:
                 logger.warning("Шаг стал слишком мал, метод продолжения остановлен.")
                 break
+
+            # сохраняем неудачный шаг
+            self.alpha_history.append(alpha_next)
+            self.h_history.append(h)
+            self.err_history.append(1e2)
 
         return results
 
@@ -352,6 +368,52 @@ class OptimalControlSolver:
         print(f"График сохранён: {filename}")
         plt.close()
 
+    # --- график шага h(α) ---
+    def plot_step_vs_alpha(self, filename="step_vs_alpha.png", datafile="step_vs_alpha_data.csv"):
+        alpha = np.array(self.alpha_history)
+        h = np.array(self.h_history)
+        err = np.array(self.err_history)
+
+        # успешные шаги (огибающая)
+        mask_success = err < 1e2
+        alpha_success = alpha[mask_success]
+        h_success = h[mask_success]
+
+        # неудачные шаги (ветки)
+        mask_fail = err >= 1e2
+        alpha_fail = alpha[mask_fail]
+        h_fail = h[mask_fail]
+
+        # --- Сохранение данных в CSV ---
+        with open(datafile, "w") as f:
+            f.write("alpha,h,success\n")
+            for a, hh, ok in zip(alpha, h, mask_success):
+                f.write(f"{a},{hh},{int(ok)}\n")
+
+        print(f"Данные графика сохранены в файл: {datafile}")
+
+        # --- Построение графика ---
+        plt.figure(figsize=(8, 5))
+
+        # огибающая — линия
+        plt.plot(alpha_success, h_success, '-o', color='blue', label='Успешные шаги (огибающая)')
+
+        # неудачные шаги — точки
+        plt.scatter(alpha_fail, h_fail, color='red', s=40, label='Неудачные шаги')
+
+        plt.yscale('log')
+        plt.xlabel("α")
+        plt.ylabel("Шаг h (лог масштаб)")
+        plt.grid(True)
+        plt.title("Зависимость шага h от α (огибающая + неудачные ветки)")
+        plt.legend()
+        plt.tight_layout()
+        plt.savefig(filename, dpi=200)
+        plt.close()
+        print(f"График сохранён: {filename}")
+
+
+
 #пример
 if __name__ == "__main__":
     solver = OptimalControlSolver(
@@ -379,6 +441,10 @@ if __name__ == "__main__":
         h_max=0.2,
         p0_initial=None
     )
+
+    # --- построение новых графиков ---
+    solver.plot_step_vs_alpha()
+    solver.plot_error_vs_alpha()
 
     print(f"\nПолучено решений: {len(results)}")
     for res in results:
