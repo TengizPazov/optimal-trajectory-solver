@@ -288,9 +288,9 @@ class OptimalControlSolver:
             t, thrust = self.compute_thrust_profile(traj)
             self.alpha = orig_alpha
             plt.plot(t, thrust, label=f'α={alpha:.2f}')
-        plt.xlabel('t')
-        plt.ylabel('|a(t)|')
-        plt.title('Профили тяги при разных α')
+        plt.xlabel('t', fontsize=14, fontweight='bold')
+        plt.ylabel('|a(t)|', fontsize=14, fontweight='bold')
+        plt.title('Профили тяги при разных α', fontsize=16, fontweight='bold')
         plt.grid(True)
         plt.legend()
         plt.tight_layout()
@@ -298,119 +298,7 @@ class OptimalControlSolver:
         print(f"График сохранён: {filename}")
         plt.close()
 
-    def plot_earth_mars_presentation(self, trajectory, optimal_control_func, filename="earth_mars_presentation.png"):
-        r = trajectory.y[0:3]
-        pv = trajectory.y[9:12]
-
-        active_x, active_y = [], []
-        passive_x, passive_y = [], []
-
-        # --- разделение участков ---
-        for i in range(r.shape[1]):
-            a = optimal_control_func(pv[:, i])
-            a_norm = np.linalg.norm(a)
-
-            if a_norm < 1e-4:
-                passive_x.append(r[0, i])
-                passive_y.append(r[1, i])
-            else:
-                active_x.append(r[0, i])
-                active_y.append(r[1, i])
-
-        # --- орбиты ---
-        theta = np.linspace(0, 2*np.pi, 1000)
-        r_earth = 1.0
-        r_mars = 1.52
-
-        x_earth = r_earth * np.cos(theta)
-        y_earth = r_earth * np.sin(theta)
-
-        x_mars = r_mars * np.cos(theta)
-        y_mars = r_mars * np.sin(theta)
-
-        # --- оформление ---
-        plt.figure(figsize=(8, 8))
-
-        # орбиты
-        plt.plot(x_earth, y_earth, linestyle='--', color='black', linewidth=2, label='Орбита Земли')
-        plt.plot(x_mars, y_mars, linestyle='-.', color='black', linewidth=2, label='Орбита Марса')
-
-        # траектория
-        plt.plot(passive_x, passive_y, color='#00cfd1', linewidth=3, label='Пассивный участок')
-        plt.plot(active_x, active_y, color='#ff00aa', linewidth=3, label='Активный участок')
-
-        # старт и финиш
-        plt.scatter(r[0, 0], r[1, 0], color='blue', s=120, edgecolors='black', zorder=5)
-        plt.scatter(r[0, -1], r[1, -1], color='red', s=120, edgecolors='black', zorder=5)
-
-        # подписи планет
-        plt.text(1.05, 0.05, "Земля", fontsize=12)
-        plt.text(1.57, 0.05, "Марс", fontsize=12)
-
-        # оси
-        plt.xlabel("x, а.е.", fontsize=14)
-        plt.ylabel("y, а.е.", fontsize=14)
-
-        # сетка
-        plt.grid(True, linestyle='--', alpha=0.5)
-
-        # легенда
-        plt.legend(fontsize=12, loc='upper left')
-
-        # пропорции
-        plt.axis('equal')
-
-        # заголовок
-        plt.title("Пример перелёта Земля–Марс", fontsize=16)
-
-        plt.tight_layout()
-        plt.savefig(filename, dpi=300)
-        print(f"График сохранён: {filename}")
-        plt.close()
-
-    # --- график шага h(α) ---
-    def plot_step_vs_alpha(self, filename="step_vs_alpha.png", datafile="step_vs_alpha_data.csv"):
-        alpha = np.array(self.alpha_history)
-        h = np.array(self.h_history)
-        err = np.array(self.err_history)
-
-        # успешные шаги (огибающая)
-        mask_success = err < 1e2
-        alpha_success = alpha[mask_success]
-        h_success = h[mask_success]
-
-        # неудачные шаги (ветки)
-        mask_fail = err >= 1e2
-        alpha_fail = alpha[mask_fail]
-        h_fail = h[mask_fail]
-
-        # --- Сохранение данных в CSV ---
-        with open(datafile, "w") as f:
-            f.write("alpha,h,success\n")
-            for a, hh, ok in zip(alpha, h, mask_success):
-                f.write(f"{a},{hh},{int(ok)}\n")
-
-        print(f"Данные графика сохранены в файл: {datafile}")
-
-        # --- Построение графика ---
-        plt.figure(figsize=(8, 5))
-
-        # огибающая — линия
-        plt.plot(alpha_success, h_success, '-o', color='blue', label='Успешные шаги (огибающая)')
-
-        # неудачные шаги — точки
-        plt.scatter(alpha_fail, h_fail, color='red', s=40, label='Неудачные шаги')
-
-        plt.yscale('log')
-        plt.xlabel("α")
-        plt.ylabel("Шаг h (лог масштаб)")
-        plt.grid(True)
-        plt.title("Зависимость шага h от α (огибающая + неудачные ветки)")
-        plt.legend()
-        plt.tight_layout()
-        plt.savefig(filename, dpi=200)
-        plt.close()
-        print(f"График сохранён: {filename}")
+    
 
 
 
@@ -442,27 +330,10 @@ if __name__ == "__main__":
         p0_initial=None
     )
 
-    # --- построение новых графиков ---
-    solver.plot_step_vs_alpha()
-    solver.plot_error_vs_alpha()
-
     print(f"\nПолучено решений: {len(results)}")
     for res in results:
         print(f"α = {res['alpha']:.3f}, a_max = {res['a_max']:.6f}")
 
+    # --- единственный график ---
     if results:
-        plot_results = [results[0], results[-2]]
-        solver.plot_trajectories_2d(plot_results, 'continuation_trajectories.png')
-        solver.plot_thrust_profiles(plot_results, 'thrust_profiles.png')
-
-        traj0 = results[0]['trajectory']
-        pv = traj0.y[9:12]
-        pv_norm = np.linalg.norm(pv, axis=0)
-        print(f"Минимальное |p_v| при alpha=0: {np.min(pv_norm):.6f}")
-        print(f"Максимальное |p_v| при alpha=0: {np.max(pv_norm):.6f}")
-
-        solver.plot_earth_mars_presentation(
-            trajectory=traj0,
-            optimal_control_func=solver.optimal_control,
-            filename="earth_mars_presentation.png"
-        )
+        solver.plot_thrust_profiles(results, 'thrust_profiles.png')
