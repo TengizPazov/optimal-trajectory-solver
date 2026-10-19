@@ -99,7 +99,7 @@ class OptimalControlSolver:
 
         y0 = np.concatenate([self.r0, self.v0, pr0, pv0])
         sol = solve_ivp(
-            self.system_equations,
+            self.system_equations, 
             [0, self.T],
             y0,
             method='LSODA',
@@ -169,7 +169,6 @@ class OptimalControlSolver:
                 if err < tol:
                     print(f"Успех: α = {alpha:.4f}, h = {h:.4f}")
 
-                    # 🔥 ВСЕГДА сохраняем p0
                     results.append({
                         "alpha": alpha,
                         "trajectory": self.trajectory,
