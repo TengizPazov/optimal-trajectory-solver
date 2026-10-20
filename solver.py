@@ -135,7 +135,6 @@ class OptimalControlSolver:
             p0_guess,
             method='trf',
             bounds=bounds,
-            x_scale='jac',
             xtol=1e-10,
             ftol=1e-10,
             gtol=1e-10,
