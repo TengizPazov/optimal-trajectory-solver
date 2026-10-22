@@ -1,0 +1,167 @@
+{
+  "summary": {
+    "status": "completed",
+    "config": {
+      "alpha_start": 0.0,
+      "alpha_end": 1.0,
+      "h_init": 0.05,
+      "tol": 0.01,
+      "h_min": 0.0001,
+      "h_max": 0.2,
+      "h_min_floor": 1e-05
+    },
+    "corrector": {
+      "profile": "diff5_tight",
+      "method": "trf",
+      "jac": "2-point",
+      "diff_step": 1e-05,
+      "x_scale": 1.0,
+      "xtol": 1e-10,
+      "ftol": 1e-10,
+      "gtol": 1e-10,
+      "max_nfev": 200,
+      "applies_to": "bounded_correction"
+    },
+    "model": {
+      "mu": 1.0,
+      "lambda_value": 0.5,
+      "kappa": 1.5,
+      "initial_a_max": 0.01,
+      "func_type": "mixed",
+      "free_a_max": true,
+      "T": 4.338361902415132
+    },
+    "environment": {
+      "python": "3.11.5",
+      "numpy": "2.2.5",
+      "scipy": "1.15.1",
+      "matplotlib": "3.10.0",
+      "pandas": "2.2.3"
+    },
+    "git_revision": "d15e3a7b0476e9904bf9019b99abc9aed3cd041b",
+    "source_sha256": {
+      "approximations.py": "f1ef5b35630ed077005320d55c3727772e1c7ff43f6aea5c669da1a5d67b297b",
+      "graph.py": "6207bc15f1eebf9924f23bcf8d7929f4f5940db69ca7594809f92c6fb7748bb4",
+      "plot_from_pickle.py": "9b90c9d0ee32c224e688f5047c41723a6cbd4a81d492ef9f909cef2042ed00a8",
+      "run_continuation.py": "b570ce14978ee204212652c308f82ddedc0b31569861e8a8ce95ab06dc11ed51",
+      "solver.py": "348fc5478c32c672f251ac3d3702227cd230c6cdd20ca6d266a2bfe241c22279"
+    },
+    "boundary_conditions": {
+      "r0": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "v0": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "rf": [
+        -1.5,
+        0.0,
+        0.0
+      ],
+      "vf": [
+        0.0,
+        -0.8164965809277261,
+        0.0
+      ]
+    },
+    "target_alpha": 1.0,
+    "reached_alpha": 1.0,
+    "solutions_count": 11,
+    "attempts": 14,
+    "failed_attempts": 3,
+    "step_floor_history": [],
+    "initial_guess": {
+      "lambda_value": 0.5,
+      "kappa": 1.5,
+      "a_max_raw": 0.15982405123593105,
+      "a_max_initial": 0.15982405123593105
+    },
+    "initial_quadratic": {
+      "status": "accepted",
+      "unbounded_residual": 3.4289759130120865e-12,
+      "peak_thrust": 0.1628820237836739,
+      "peak_time": 0.0,
+      "a_max": 0.1628820237836739,
+      "bounded_residual": 3.4290681327376104e-12,
+      "maximum_state_deviation": 4.660953740672398e-16,
+      "verification_tolerance": 1e-07
+    },
+    "final_a_max": 0.15755798901564783,
+    "final_residual_norm": 6.29146507342778e-09,
+    "elapsed_seconds": 21.164936199900694
+  },
+  "independent_verification": {
+    "method": "DOP853",
+    "rtol": 1e-11,
+    "atol": 1e-13,
+    "max_step": 0.02169180951207566,
+    "solutions_checked": 11,
+    "maximum_residual": 7.720117373573755e-08,
+    "final_residual": 1.3790280696449549e-08,
+    "loaded_pickle_residual": 6.29146507342778e-09,
+    "checks": [
+      {
+        "alpha": 0.0,
+        "a_max": 0.1628820237836739,
+        "residual": 5.746854865447738e-10
+      },
+      {
+        "alpha": 0.05,
+        "a_max": 0.18939210889971708,
+        "residual": 2.3503344414255197e-09
+      },
+      {
+        "alpha": 0.125,
+        "a_max": 0.20508405672621632,
+        "residual": 9.968066563194759e-09
+      },
+      {
+        "alpha": 0.18125000000000002,
+        "a_max": 0.2083778744214102,
+        "residual": 4.938382133018838e-09
+      },
+      {
+        "alpha": 0.265625,
+        "a_max": 0.18254619249569187,
+        "residual": 2.096187332718306e-08
+      },
+      {
+        "alpha": 0.32890625,
+        "a_max": 0.2352944811858314,
+        "residual": 8.726740446769944e-09
+      },
+      {
+        "alpha": 0.423828125,
+        "a_max": 0.31758113086794687,
+        "residual": 7.560952770418834e-09
+      },
+      {
+        "alpha": 0.5662109375,
+        "a_max": 0.27619924937414253,
+        "residual": 7.720117373573755e-08
+      },
+      {
+        "alpha": 0.6662109374999999,
+        "a_max": 0.16178158801683992,
+        "residual": 4.1413553698360185e-08
+      },
+      {
+        "alpha": 0.8162109375,
+        "a_max": 0.16005174035933495,
+        "residual": 4.6338615115885776e-08
+      },
+      {
+        "alpha": 1.0,
+        "a_max": 0.15755798901564783,
+        "residual": 1.3790280696449549e-08
+      }
+    ]
+  },
+  "tests": {
+    "passed": 26
+  }
+}

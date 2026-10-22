@@ -1,0 +1,224 @@
+[
+  {
+    "id": "base__diff4_stop8",
+    "geometry": "base",
+    "profile": {
+      "id": "diff4_stop8",
+      "corrector": {
+        "xtol": 1e-08,
+        "ftol": 1e-08,
+        "gtol": 1e-08,
+        "diff_step": 0.0001
+      }
+    },
+    "phase": "full",
+    "seed": "auto",
+    "snap_phase": true,
+    "lambda": 0.5,
+    "kappa": 1.5,
+    "evaluation_budget": 15000
+  },
+  {
+    "id": "base__diff6_stop8",
+    "geometry": "base",
+    "profile": {
+      "id": "diff6_stop8",
+      "corrector": {
+        "xtol": 1e-08,
+        "ftol": 1e-08,
+        "gtol": 1e-08,
+        "diff_step": 1e-06
+      }
+    },
+    "phase": "full",
+    "seed": "auto",
+    "snap_phase": true,
+    "lambda": 0.5,
+    "kappa": 1.5,
+    "evaluation_budget": 15000
+  },
+  {
+    "id": "base__diff5_tight",
+    "geometry": "base",
+    "profile": {
+      "id": "diff5_tight",
+      "corrector": {
+        "diff_step": 1e-05
+      }
+    },
+    "phase": "full",
+    "seed": "auto",
+    "snap_phase": true,
+    "lambda": 0.5,
+    "kappa": 1.5,
+    "evaluation_budget": 15000
+  },
+  {
+    "id": "base__diff5_stop8_max400",
+    "geometry": "base",
+    "profile": {
+      "id": "diff5_stop8_max400",
+      "corrector": {
+        "xtol": 1e-08,
+        "ftol": 1e-08,
+        "gtol": 1e-08,
+        "diff_step": 1e-05,
+        "max_nfev": 400
+      }
+    },
+    "phase": "full",
+    "seed": "auto",
+    "snap_phase": true,
+    "lambda": 0.5,
+    "kappa": 1.5,
+    "evaluation_budget": 15000
+  },
+  {
+    "id": "inward__diff4_stop8",
+    "geometry": "inward",
+    "profile": {
+      "id": "diff4_stop8",
+      "corrector": {
+        "xtol": 1e-08,
+        "ftol": 1e-08,
+        "gtol": 1e-08,
+        "diff_step": 0.0001
+      }
+    },
+    "phase": "full",
+    "seed": "auto",
+    "snap_phase": true,
+    "lambda": 0.5,
+    "kappa": 0.72,
+    "evaluation_budget": 15000
+  },
+  {
+    "id": "inward__diff6_stop8",
+    "geometry": "inward",
+    "profile": {
+      "id": "diff6_stop8",
+      "corrector": {
+        "xtol": 1e-08,
+        "ftol": 1e-08,
+        "gtol": 1e-08,
+        "diff_step": 1e-06
+      }
+    },
+    "phase": "full",
+    "seed": "auto",
+    "snap_phase": true,
+    "lambda": 0.5,
+    "kappa": 0.72,
+    "evaluation_budget": 15000
+  },
+  {
+    "id": "inward__diff5_tight",
+    "geometry": "inward",
+    "profile": {
+      "id": "diff5_tight",
+      "corrector": {
+        "diff_step": 1e-05
+      }
+    },
+    "phase": "full",
+    "seed": "auto",
+    "snap_phase": true,
+    "lambda": 0.5,
+    "kappa": 0.72,
+    "evaluation_budget": 15000
+  },
+  {
+    "id": "inward__diff5_stop8_max400",
+    "geometry": "inward",
+    "profile": {
+      "id": "diff5_stop8_max400",
+      "corrector": {
+        "xtol": 1e-08,
+        "ftol": 1e-08,
+        "gtol": 1e-08,
+        "diff_step": 1e-05,
+        "max_nfev": 400
+      }
+    },
+    "phase": "full",
+    "seed": "auto",
+    "snap_phase": true,
+    "lambda": 0.5,
+    "kappa": 0.72,
+    "evaluation_budget": 15000
+  },
+  {
+    "id": "short_in__diff4_stop8",
+    "geometry": "short_in",
+    "profile": {
+      "id": "diff4_stop8",
+      "corrector": {
+        "xtol": 1e-08,
+        "ftol": 1e-08,
+        "gtol": 1e-08,
+        "diff_step": 0.0001
+      }
+    },
+    "phase": "full",
+    "seed": "auto",
+    "snap_phase": true,
+    "lambda": 0.23,
+    "kappa": 0.83,
+    "evaluation_budget": 15000
+  },
+  {
+    "id": "short_in__diff6_stop8",
+    "geometry": "short_in",
+    "profile": {
+      "id": "diff6_stop8",
+      "corrector": {
+        "xtol": 1e-08,
+        "ftol": 1e-08,
+        "gtol": 1e-08,
+        "diff_step": 1e-06
+      }
+    },
+    "phase": "full",
+    "seed": "auto",
+    "snap_phase": true,
+    "lambda": 0.23,
+    "kappa": 0.83,
+    "evaluation_budget": 15000
+  },
+  {
+    "id": "short_in__diff5_tight",
+    "geometry": "short_in",
+    "profile": {
+      "id": "diff5_tight",
+      "corrector": {
+        "diff_step": 1e-05
+      }
+    },
+    "phase": "full",
+    "seed": "auto",
+    "snap_phase": true,
+    "lambda": 0.23,
+    "kappa": 0.83,
+    "evaluation_budget": 15000
+  },
+  {
+    "id": "short_in__diff5_stop8_max400",
+    "geometry": "short_in",
+    "profile": {
+      "id": "diff5_stop8_max400",
+      "corrector": {
+        "xtol": 1e-08,
+        "ftol": 1e-08,
+        "gtol": 1e-08,
+        "diff_step": 1e-05,
+        "max_nfev": 400
+      }
+    },
+    "phase": "full",
+    "seed": "auto",
+    "snap_phase": true,
+    "lambda": 0.23,
+    "kappa": 0.83,
+    "evaluation_budget": 15000
+  }
+]

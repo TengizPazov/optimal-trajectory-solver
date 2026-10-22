@@ -1,0 +1,167 @@
+[
+  {
+    "id": "base_exact",
+    "lambda": 0.5,
+    "kappa": 1.5,
+    "seed": "default",
+    "phase": "full",
+    "snap_phase": true,
+    "h_min_floor": 0.0001
+  },
+  {
+    "id": "base_trig",
+    "lambda": 0.5,
+    "kappa": 1.5,
+    "seed": "default",
+    "phase": "full",
+    "h_min_floor": 0.0001
+  },
+  {
+    "id": "base_matched",
+    "lambda": 0.5,
+    "kappa": 1.5,
+    "seed": "matched",
+    "phase": "full",
+    "h_min_floor": 0.0001
+  },
+  {
+    "id": "inward_default",
+    "lambda": 0.5,
+    "kappa": 0.72,
+    "seed": "default",
+    "phase": "full",
+    "h_min_floor": 0.0001
+  },
+  {
+    "id": "inward_matched",
+    "lambda": 0.5,
+    "kappa": 0.72,
+    "seed": "matched",
+    "phase": "full",
+    "h_min_floor": 0.0001
+  },
+  {
+    "id": "near_in",
+    "lambda": 0.5,
+    "kappa": 0.999,
+    "seed": "matched",
+    "phase": "full",
+    "h_min_floor": 0.0001
+  },
+  {
+    "id": "equal",
+    "lambda": 0.5,
+    "kappa": 1.0,
+    "seed": "matched",
+    "phase": "full",
+    "h_min_floor": 0.0001
+  },
+  {
+    "id": "near_out",
+    "lambda": 0.5,
+    "kappa": 1.001,
+    "seed": "matched",
+    "phase": "full",
+    "h_min_floor": 0.0001
+  },
+  {
+    "id": "join_left",
+    "lambda": 0.7499,
+    "kappa": 1.5,
+    "seed": "matched",
+    "phase": "full",
+    "h_min_floor": 0.0001
+  },
+  {
+    "id": "join",
+    "lambda": 0.75,
+    "kappa": 1.5,
+    "seed": "matched",
+    "phase": "full",
+    "h_min_floor": 0.0001
+  },
+  {
+    "id": "join_right",
+    "lambda": 0.7501,
+    "kappa": 1.5,
+    "seed": "matched",
+    "phase": "full",
+    "h_min_floor": 0.0001
+  },
+  {
+    "id": "short_in",
+    "lambda": 0.23,
+    "kappa": 0.83,
+    "seed": "matched",
+    "phase": "full",
+    "h_min_floor": 0.0001
+  },
+  {
+    "id": "long_out",
+    "lambda": 0.91,
+    "kappa": 1.82,
+    "seed": "matched",
+    "phase": "full",
+    "h_min_floor": 0.0001
+  },
+  {
+    "id": "multiturn_in",
+    "lambda": 1.3,
+    "kappa": 0.68,
+    "seed": "matched",
+    "phase": "full",
+    "h_min_floor": 0.0001
+  },
+  {
+    "id": "far_out",
+    "lambda": 0.5,
+    "kappa": 3.0,
+    "seed": "matched",
+    "phase": "full",
+    "h_min_floor": 0.0001
+  },
+  {
+    "id": "kappa_left",
+    "lambda": 0.5,
+    "kappa": 1.499,
+    "seed": "matched",
+    "phase": "full",
+    "h_min_floor": 0.0001
+  },
+  {
+    "id": "kappa_right",
+    "lambda": 0.5,
+    "kappa": 1.501,
+    "seed": "matched",
+    "phase": "full",
+    "h_min_floor": 0.0001
+  },
+  {
+    "id": "base_fine_alpha",
+    "lambda": 0.5,
+    "kappa": 1.5,
+    "seed": "matched",
+    "phase": "full",
+    "step": 0.005,
+    "h_max": 0.02,
+    "h_min_floor": 0.0001
+  },
+  {
+    "id": "inward_fine_alpha",
+    "lambda": 0.5,
+    "kappa": 0.72,
+    "seed": "matched",
+    "phase": "full",
+    "step": 0.005,
+    "h_max": 0.02,
+    "h_min_floor": 0.0001
+  },
+  {
+    "id": "short_far_capped",
+    "lambda": 0.12,
+    "kappa": 2.1,
+    "seed": "matched_capped",
+    "phase": "full",
+    "h_min_floor": 0.0001
+  }
+]

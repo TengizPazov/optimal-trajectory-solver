@@ -1,0 +1,33 @@
+{
+  "alpha": 0.614278268814087,
+  "reference_central_steps": [
+    0.0001,
+    1e-05
+  ],
+  "reference_relative_difference": 1.129014015297938e-05,
+  "columns": [
+    0,
+    1,
+    3,
+    4,
+    6
+  ],
+  "rows": [
+    {
+      "relative_step": 1.4901161193847656e-08,
+      "relative_difference_to_dop853": 0.43178738799668354
+    },
+    {
+      "relative_step": 1e-06,
+      "relative_difference_to_dop853": 0.014774202359482402
+    },
+    {
+      "relative_step": 1e-05,
+      "relative_difference_to_dop853": 0.0011491527475609386
+    },
+    {
+      "relative_step": 0.0001,
+      "relative_difference_to_dop853": 0.00034865288502534015
+    }
+  ]
+}

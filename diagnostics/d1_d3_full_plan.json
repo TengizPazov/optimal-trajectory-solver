@@ -1,0 +1,82 @@
+[
+  {
+    "id": "inward_auto",
+    "lambda": 0.5,
+    "kappa": 0.72,
+    "phase": "full",
+    "seed": "auto"
+  },
+  {
+    "id": "short_in_auto",
+    "lambda": 0.23,
+    "kappa": 0.83,
+    "phase": "full",
+    "seed": "auto"
+  },
+  {
+    "id": "multiturn_auto",
+    "lambda": 1.3,
+    "kappa": 0.68,
+    "phase": "full",
+    "seed": "auto"
+  },
+  {
+    "id": "short_far_auto",
+    "lambda": 0.12,
+    "kappa": 2.1,
+    "phase": "full",
+    "seed": "auto"
+  },
+  {
+    "id": "base_auto",
+    "lambda": 0.5,
+    "kappa": 1.5,
+    "phase": "full",
+    "seed": "auto",
+    "snap_phase": true
+  },
+  {
+    "id": "equal_auto",
+    "lambda": 0.5,
+    "kappa": 1.0,
+    "phase": "full",
+    "seed": "auto",
+    "tol": 1e-05
+  },
+  {
+    "id": "lambda_left_auto",
+    "lambda": 0.4999,
+    "kappa": 1.5,
+    "phase": "full",
+    "seed": "auto"
+  },
+  {
+    "id": "lambda_right_auto",
+    "lambda": 0.5001,
+    "kappa": 1.5,
+    "phase": "full",
+    "seed": "auto"
+  },
+  {
+    "id": "kappa_left_auto",
+    "lambda": 0.5,
+    "kappa": 1.499,
+    "phase": "full",
+    "seed": "auto"
+  },
+  {
+    "id": "kappa_right_auto",
+    "lambda": 0.5,
+    "kappa": 1.501,
+    "phase": "full",
+    "seed": "auto"
+  },
+  {
+    "id": "near_out_strict_auto",
+    "lambda": 0.5,
+    "kappa": 1.001,
+    "phase": "full",
+    "seed": "auto",
+    "tol": 1e-05
+  }
+]

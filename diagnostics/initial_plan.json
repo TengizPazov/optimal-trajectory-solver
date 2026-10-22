@@ -1,0 +1,184 @@
+[
+  {
+    "id": "base_default",
+    "lambda": 0.5,
+    "kappa": 1.5,
+    "seed": "default",
+    "phase": "initial"
+  },
+  {
+    "id": "base_matched",
+    "lambda": 0.5,
+    "kappa": 1.5,
+    "seed": "matched",
+    "phase": "initial"
+  },
+  {
+    "id": "inward_default",
+    "lambda": 0.5,
+    "kappa": 0.72,
+    "seed": "default",
+    "phase": "initial"
+  },
+  {
+    "id": "inward_matched",
+    "lambda": 0.5,
+    "kappa": 0.72,
+    "seed": "matched",
+    "phase": "initial"
+  },
+  {
+    "id": "equal_default",
+    "lambda": 0.5,
+    "kappa": 1.0,
+    "seed": "default",
+    "phase": "initial"
+  },
+  {
+    "id": "equal_matched",
+    "lambda": 0.5,
+    "kappa": 1.0,
+    "seed": "matched",
+    "phase": "initial"
+  },
+  {
+    "id": "near_in_default",
+    "lambda": 0.5,
+    "kappa": 0.999,
+    "seed": "default",
+    "phase": "initial"
+  },
+  {
+    "id": "near_in_matched",
+    "lambda": 0.5,
+    "kappa": 0.999,
+    "seed": "matched",
+    "phase": "initial"
+  },
+  {
+    "id": "near_out_default",
+    "lambda": 0.5,
+    "kappa": 1.001,
+    "seed": "default",
+    "phase": "initial"
+  },
+  {
+    "id": "near_out_matched",
+    "lambda": 0.5,
+    "kappa": 1.001,
+    "seed": "matched",
+    "phase": "initial"
+  },
+  {
+    "id": "join_left_default",
+    "lambda": 0.7499,
+    "kappa": 1.5,
+    "seed": "default",
+    "phase": "initial"
+  },
+  {
+    "id": "join_left_matched",
+    "lambda": 0.7499,
+    "kappa": 1.5,
+    "seed": "matched",
+    "phase": "initial"
+  },
+  {
+    "id": "join_default",
+    "lambda": 0.75,
+    "kappa": 1.5,
+    "seed": "default",
+    "phase": "initial"
+  },
+  {
+    "id": "join_matched",
+    "lambda": 0.75,
+    "kappa": 1.5,
+    "seed": "matched",
+    "phase": "initial"
+  },
+  {
+    "id": "join_right_default",
+    "lambda": 0.7501,
+    "kappa": 1.5,
+    "seed": "default",
+    "phase": "initial"
+  },
+  {
+    "id": "join_right_matched",
+    "lambda": 0.7501,
+    "kappa": 1.5,
+    "seed": "matched",
+    "phase": "initial"
+  },
+  {
+    "id": "short_in_default",
+    "lambda": 0.23,
+    "kappa": 0.83,
+    "seed": "default",
+    "phase": "initial"
+  },
+  {
+    "id": "short_in_matched",
+    "lambda": 0.23,
+    "kappa": 0.83,
+    "seed": "matched",
+    "phase": "initial"
+  },
+  {
+    "id": "long_out_default",
+    "lambda": 0.91,
+    "kappa": 1.82,
+    "seed": "default",
+    "phase": "initial"
+  },
+  {
+    "id": "long_out_matched",
+    "lambda": 0.91,
+    "kappa": 1.82,
+    "seed": "matched",
+    "phase": "initial"
+  },
+  {
+    "id": "multiturn_in_default",
+    "lambda": 1.3,
+    "kappa": 0.68,
+    "seed": "default",
+    "phase": "initial"
+  },
+  {
+    "id": "multiturn_in_matched",
+    "lambda": 1.3,
+    "kappa": 0.68,
+    "seed": "matched",
+    "phase": "initial"
+  },
+  {
+    "id": "short_far_default",
+    "lambda": 0.12,
+    "kappa": 2.1,
+    "seed": "default",
+    "phase": "initial"
+  },
+  {
+    "id": "short_far_matched",
+    "lambda": 0.12,
+    "kappa": 2.1,
+    "seed": "matched",
+    "phase": "initial"
+  },
+  {
+    "id": "far_default",
+    "lambda": 0.5,
+    "kappa": 3.0,
+    "seed": "default",
+    "phase": "initial"
+  },
+  {
+    "id": "far_matched",
+    "lambda": 0.5,
+    "kappa": 3.0,
+    "seed": "matched",
+    "phase": "initial"
+  }
+]

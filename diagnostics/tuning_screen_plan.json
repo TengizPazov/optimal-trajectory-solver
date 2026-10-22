@@ -1,0 +1,318 @@
+[
+  {
+    "id": "base__stop8",
+    "geometry": "base",
+    "profile": {
+      "id": "stop8",
+      "corrector": {
+        "xtol": 1e-08,
+        "ftol": 1e-08,
+        "gtol": 1e-08
+      }
+    },
+    "phase": "full",
+    "seed": "auto",
+    "snap_phase": true,
+    "lambda": 0.5,
+    "kappa": 1.5,
+    "evaluation_budget": 15000
+  },
+  {
+    "id": "base__stop6",
+    "geometry": "base",
+    "profile": {
+      "id": "stop6",
+      "corrector": {
+        "xtol": 1e-06,
+        "ftol": 1e-06,
+        "gtol": 1e-06
+      }
+    },
+    "phase": "full",
+    "seed": "auto",
+    "snap_phase": true,
+    "lambda": 0.5,
+    "kappa": 1.5,
+    "evaluation_budget": 15000
+  },
+  {
+    "id": "base__diff5_stop8",
+    "geometry": "base",
+    "profile": {
+      "id": "diff5_stop8",
+      "corrector": {
+        "xtol": 1e-08,
+        "ftol": 1e-08,
+        "gtol": 1e-08,
+        "diff_step": 1e-05
+      }
+    },
+    "phase": "full",
+    "seed": "auto",
+    "snap_phase": true,
+    "lambda": 0.5,
+    "kappa": 1.5,
+    "evaluation_budget": 15000
+  },
+  {
+    "id": "base__scale_stop8",
+    "geometry": "base",
+    "profile": {
+      "id": "scale_stop8",
+      "corrector": {
+        "xtol": 1e-08,
+        "ftol": 1e-08,
+        "gtol": 1e-08,
+        "x_scale": "jac"
+      }
+    },
+    "phase": "full",
+    "seed": "auto",
+    "snap_phase": true,
+    "lambda": 0.5,
+    "kappa": 1.5,
+    "evaluation_budget": 15000
+  },
+  {
+    "id": "base__small_step_stop8",
+    "geometry": "base",
+    "profile": {
+      "id": "small_step_stop8",
+      "corrector": {
+        "xtol": 1e-08,
+        "ftol": 1e-08,
+        "gtol": 1e-08
+      },
+      "continuation": {
+        "step": 0.02,
+        "h_max": 0.08
+      }
+    },
+    "phase": "full",
+    "seed": "auto",
+    "snap_phase": true,
+    "lambda": 0.5,
+    "kappa": 1.5,
+    "evaluation_budget": 15000
+  },
+  {
+    "id": "inward__reference",
+    "geometry": "inward",
+    "profile": {
+      "id": "reference",
+      "corrector": {}
+    },
+    "phase": "full",
+    "seed": "auto",
+    "snap_phase": true,
+    "lambda": 0.5,
+    "kappa": 0.72,
+    "evaluation_budget": 15000
+  },
+  {
+    "id": "inward__stop8",
+    "geometry": "inward",
+    "profile": {
+      "id": "stop8",
+      "corrector": {
+        "xtol": 1e-08,
+        "ftol": 1e-08,
+        "gtol": 1e-08
+      }
+    },
+    "phase": "full",
+    "seed": "auto",
+    "snap_phase": true,
+    "lambda": 0.5,
+    "kappa": 0.72,
+    "evaluation_budget": 15000
+  },
+  {
+    "id": "inward__stop6",
+    "geometry": "inward",
+    "profile": {
+      "id": "stop6",
+      "corrector": {
+        "xtol": 1e-06,
+        "ftol": 1e-06,
+        "gtol": 1e-06
+      }
+    },
+    "phase": "full",
+    "seed": "auto",
+    "snap_phase": true,
+    "lambda": 0.5,
+    "kappa": 0.72,
+    "evaluation_budget": 15000
+  },
+  {
+    "id": "inward__diff5_stop8",
+    "geometry": "inward",
+    "profile": {
+      "id": "diff5_stop8",
+      "corrector": {
+        "xtol": 1e-08,
+        "ftol": 1e-08,
+        "gtol": 1e-08,
+        "diff_step": 1e-05
+      }
+    },
+    "phase": "full",
+    "seed": "auto",
+    "snap_phase": true,
+    "lambda": 0.5,
+    "kappa": 0.72,
+    "evaluation_budget": 15000
+  },
+  {
+    "id": "inward__scale_stop8",
+    "geometry": "inward",
+    "profile": {
+      "id": "scale_stop8",
+      "corrector": {
+        "xtol": 1e-08,
+        "ftol": 1e-08,
+        "gtol": 1e-08,
+        "x_scale": "jac"
+      }
+    },
+    "phase": "full",
+    "seed": "auto",
+    "snap_phase": true,
+    "lambda": 0.5,
+    "kappa": 0.72,
+    "evaluation_budget": 15000
+  },
+  {
+    "id": "inward__small_step_stop8",
+    "geometry": "inward",
+    "profile": {
+      "id": "small_step_stop8",
+      "corrector": {
+        "xtol": 1e-08,
+        "ftol": 1e-08,
+        "gtol": 1e-08
+      },
+      "continuation": {
+        "step": 0.02,
+        "h_max": 0.08
+      }
+    },
+    "phase": "full",
+    "seed": "auto",
+    "snap_phase": true,
+    "lambda": 0.5,
+    "kappa": 0.72,
+    "evaluation_budget": 15000
+  },
+  {
+    "id": "short_in__reference",
+    "geometry": "short_in",
+    "profile": {
+      "id": "reference",
+      "corrector": {}
+    },
+    "phase": "full",
+    "seed": "auto",
+    "snap_phase": true,
+    "lambda": 0.23,
+    "kappa": 0.83,
+    "evaluation_budget": 15000
+  },
+  {
+    "id": "short_in__stop8",
+    "geometry": "short_in",
+    "profile": {
+      "id": "stop8",
+      "corrector": {
+        "xtol": 1e-08,
+        "ftol": 1e-08,
+        "gtol": 1e-08
+      }
+    },
+    "phase": "full",
+    "seed": "auto",
+    "snap_phase": true,
+    "lambda": 0.23,
+    "kappa": 0.83,
+    "evaluation_budget": 15000
+  },
+  {
+    "id": "short_in__stop6",
+    "geometry": "short_in",
+    "profile": {
+      "id": "stop6",
+      "corrector": {
+        "xtol": 1e-06,
+        "ftol": 1e-06,
+        "gtol": 1e-06
+      }
+    },
+    "phase": "full",
+    "seed": "auto",
+    "snap_phase": true,
+    "lambda": 0.23,
+    "kappa": 0.83,
+    "evaluation_budget": 15000
+  },
+  {
+    "id": "short_in__diff5_stop8",
+    "geometry": "short_in",
+    "profile": {
+      "id": "diff5_stop8",
+      "corrector": {
+        "xtol": 1e-08,
+        "ftol": 1e-08,
+        "gtol": 1e-08,
+        "diff_step": 1e-05
+      }
+    },
+    "phase": "full",
+    "seed": "auto",
+    "snap_phase": true,
+    "lambda": 0.23,
+    "kappa": 0.83,
+    "evaluation_budget": 15000
+  },
+  {
+    "id": "short_in__scale_stop8",
+    "geometry": "short_in",
+    "profile": {
+      "id": "scale_stop8",
+      "corrector": {
+        "xtol": 1e-08,
+        "ftol": 1e-08,
+        "gtol": 1e-08,
+        "x_scale": "jac"
+      }
+    },
+    "phase": "full",
+    "seed": "auto",
+    "snap_phase": true,
+    "lambda": 0.23,
+    "kappa": 0.83,
+    "evaluation_budget": 15000
+  },
+  {
+    "id": "short_in__small_step_stop8",
+    "geometry": "short_in",
+    "profile": {
+      "id": "small_step_stop8",
+      "corrector": {
+        "xtol": 1e-08,
+        "ftol": 1e-08,
+        "gtol": 1e-08
+      },
+      "continuation": {
+        "step": 0.02,
+        "h_max": 0.08
+      }
+    },
+    "phase": "full",
+    "seed": "auto",
+    "snap_phase": true,
+    "lambda": 0.23,
+    "kappa": 0.83,
+    "evaluation_budget": 15000
+  }
+]

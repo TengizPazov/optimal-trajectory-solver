@@ -11,13 +11,14 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
+from scipy.optimize import least_squares as scipy_least_squares
 
 import run_continuation
 from solver import OptimalControlSolver
 
 
 def make_solver():
-    solver = OptimalControlSolver(1.0, 0.2, 0.0, 'mixed')
+    solver = OptimalControlSolver(1.0, 0.2, 0.2, 'mixed')
     solver.set_boundary_conditions([2, 0, 0], [0, 1, 0], [-3, 0, 0], [0, -1, 0], 1.0)
     solver.p0 = np.zeros(6)
     return solver
@@ -60,9 +61,12 @@ class SolverTests(unittest.TestCase):
     def test_solve_accepts_valid_trajectory(self):
         s = make_solver()
         opt = SimpleNamespace(success=True, x=np.r_[np.zeros(6), 0.2])
-        with patch('solver.least_squares', return_value=opt), patch.object(
+        with patch('solver.least_squares', return_value=opt) as corrector, patch.object(
                 s, 'integrate_trajectory', return_value=trajectory(s, 1e-6)):
             self.assertTrue(s.solve(np.r_[np.zeros(6), 0.2]).success)
+        self.assertEqual(corrector.call_args.kwargs['diff_step'], 1e-5)
+        self.assertEqual(corrector.call_args.kwargs['jac'], '2-point')
+        self.assertEqual(corrector.call_args.kwargs['x_scale'], 1.0)
 
     def test_initial_optimizer_failure_is_logged(self):
         s = make_solver()
@@ -86,7 +90,7 @@ class SolverTests(unittest.TestCase):
             s.trajectory = trajectory(s) if ok else None
             return SimpleNamespace(success=ok)
         with patch.object(s, 'solve', side_effect=solve):
-            results = s.continuation_method(h_init=0.05, h_min=0.05)
+            results = s.continuation_method(h_init=0.05, h_min=0.05, h_min_floor=0.05)
         self.assertEqual(len(results), 1)
         self.assertEqual(s.continuation_status, {
             'state': 'partial', 'target_alpha': 1.0, 'reached_alpha': 0.0})
@@ -101,6 +105,136 @@ class SolverTests(unittest.TestCase):
             results = s.continuation_method(alpha_end=0.1)
         self.assertEqual(results[-1]['alpha'], 0.1)
         self.assertEqual(s.continuation_status['state'], 'completed')
+
+    def test_initial_guess_uses_explicit_turns_and_actual_radius_ratio(self):
+        s = make_solver()
+        s.set_boundary_conditions([1, 0, 0], [0, 1, 0], [-.72, 0, 0], [0, -1, 0], 4,
+                                  lambda_value=1.3)
+        with patch('solver.get_initial_adjoint', return_value=(np.zeros(3), np.ones(3))) as guess:
+            seed = s.initial_guess()
+        guess.assert_called_once_with(1.3, .72)
+        self.assertEqual(seed[-1], 1.0)
+        self.assertGreater(s.initial_guess_info['a_max_raw'], 1.)
+
+    def test_automatic_guess_requires_explicit_turn_count(self):
+        s = make_solver()
+        with self.assertRaisesRegex(ValueError, 'lambda_value'):
+            s.solve()
+
+    def test_explicit_guess_takes_precedence(self):
+        s = make_solver()
+        opt = SimpleNamespace(success=True, x=np.r_[np.zeros(6), .2])
+        with patch('solver.get_initial_adjoint') as guess, patch(
+                'solver.least_squares', return_value=opt), patch.object(
+                s, 'integrate_trajectory', return_value=trajectory(s)):
+            s.solve(np.r_[np.zeros(6), .2])
+        guess.assert_not_called()
+
+    def test_local_floor_reduction_and_recovery(self):
+        s = make_solver()
+        failed_once = False
+        def solve(*args, **kwargs):
+            nonlocal failed_once
+            ok = s.alpha == 0. or failed_once
+            if not ok:
+                failed_once = True
+            s.trajectory = trajectory(s) if ok else None
+            return SimpleNamespace(success=ok)
+        with patch.object(s, 'solve', side_effect=solve):
+            results = s.continuation_method(alpha_end=.001, h_init=1e-4,
+                                            h_min=1e-4, h_min_floor=1e-5)
+        self.assertEqual(results[-1]['alpha'], .001)
+        self.assertEqual([e['event'] for e in s.step_floor_history], ['lower', 'restore'])
+        self.assertAlmostEqual(s.step_log[2][1], 5e-5)
+
+    def test_local_floor_has_a_finite_stop(self):
+        s = make_solver()
+        def solve(*args, **kwargs):
+            ok = s.alpha == 0.
+            s.trajectory = trajectory(s) if ok else None
+            return SimpleNamespace(success=ok)
+        with patch.object(s, 'solve', side_effect=solve):
+            s.continuation_method(h_init=.05, h_min=.05, h_min_floor=.005)
+        self.assertEqual(s.continuation_status['state'], 'partial')
+        self.assertAlmostEqual(s.step_log[-1][1], .005)
+        self.assertLess(len(s.step_log), 10)
+
+    def test_invalid_floor_is_rejected_before_solving(self):
+        s = make_solver()
+        with patch.object(s, 'solve') as solve:
+            with self.assertRaises(ValueError):
+                s.continuation_method(h_min=1e-4, h_min_floor=1e-3)
+        solve.assert_not_called()
+
+    def test_turn_count_survives_save_load(self):
+        s = make_solver()
+        s.lambda_value = 1.3
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp) / 'solution.pkl'
+            s.save_solution(target)
+            with patch.object(OptimalControlSolver, 'integrate_trajectory', return_value=trajectory(s)):
+                loaded, _ = OptimalControlSolver.load_and_integrate(target)
+        self.assertEqual(loaded.lambda_value, 1.3)
+
+    def test_initial_quadratic_cap_matches_analytic_double_integrator(self):
+        # μ=0: a(t)=0.06-0.012t для перелёта 1 -> 2 за T=10 с нулевыми скоростями.
+        s = OptimalControlSolver(0., .001, 0., 'mixed')
+        s.set_boundary_conditions([1, 0, 0], [0, 0, 0], [2, 0, 0], [0, 0, 0], 10.)
+        with patch('solver.least_squares', wraps=scipy_least_squares) as corrector:
+            result = s.solve(np.array([.011, 0, 0, .055, 0, 0, .001]))
+        self.assertNotIn('diff_step', corrector.call_args.kwargs)
+        self.assertTrue(result.success)
+        np.testing.assert_allclose(s.p0, [.012, 0, 0, .06, 0, 0], atol=1e-8)
+        self.assertAlmostEqual(s.a_max, .06, places=8)
+        self.assertLess(np.linalg.norm(s.trajectory_residual(s.trajectory)), 1e-8)
+        self.assertLess(s.initial_quadratic_info['maximum_state_deviation'], 1e-7)
+        self.assertEqual(result.x.shape, (7,))
+        self.assertEqual(result.jac.shape, (6, 7))
+
+    def test_peak_search_includes_interior_of_integration_intervals(self):
+        y = np.zeros((12, 2))
+        y[9] = 1.
+        def dense(t):
+            value = np.zeros(12)
+            value[9] = 1. + 4. * t * (1. - t)
+            return value
+        traj = SimpleNamespace(t=np.array([0., 1.]), y=y, sol=dense)
+        peak, time = OptimalControlSolver.peak_quadratic_thrust(traj)
+        self.assertAlmostEqual(peak, 2., places=10)
+        self.assertAlmostEqual(time, .5, places=6)
+
+    def test_initial_peak_above_upper_bound_is_rejected_without_clipping(self):
+        # The same rest-to-rest transfer in T=1 needs peak thrust 6 > 1.
+        s = OptimalControlSolver(0., .2, 0., 'mixed')
+        s.set_boundary_conditions([1, 0, 0], [0, 0, 0], [2, 0, 0], [0, 0, 0], 1.)
+        result = s.solve(np.array([12., 0, 0, 6., 0, 0, .2]))
+        self.assertFalse(result.success)
+        self.assertGreater(s.initial_quadratic_info['peak_thrust'], 1.)
+        self.assertEqual(s.a_max, .2)
+        self.assertIsNone(s.trajectory)
+        self.assertFalse(s._unbounded_quadratic)
+        self.assertTrue(s.free_a_max)
+
+    def test_initialization_restores_mode_on_failure(self):
+        s = make_solver()
+        s.alpha = 0.
+        with patch('solver.least_squares', side_effect=RuntimeError('test')):
+            with self.assertRaises(RuntimeError):
+                s.solve(np.r_[np.zeros(6), .2])
+        self.assertTrue(s.free_a_max)
+        self.assertFalse(s._unbounded_quadratic)
+
+    def test_fixed_cap_is_not_replaced_by_initialization(self):
+        s = make_solver()
+        s.alpha = 0.
+        s.free_a_max = False
+        opt = SimpleNamespace(success=True, x=np.zeros(6))
+        with patch.object(s, 'initialize_quadratic') as initialize, patch(
+                'solver.least_squares', return_value=opt), patch.object(
+                s, 'integrate_trajectory', return_value=trajectory(s)):
+            s.solve(np.zeros(6))
+        initialize.assert_not_called()
+        self.assertEqual(s.a_max, .2)
 
     def test_profiles_use_individual_caps_and_restore_state(self):
         s = make_solver()

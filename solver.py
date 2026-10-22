@@ -3,7 +3,7 @@ import pickle
 import logging
 from pathlib import Path
 from scipy.integrate import solve_ivp
-from scipy.optimize import least_squares
+from scipy.optimize import least_squares, minimize_scalar
 import matplotlib.pyplot as plt
 import matplotlib.lines as mlines
 from approximations import T_a, get_initial_adjoint
@@ -19,15 +19,38 @@ class OptimalControlSolver:
         self.func_type = func_type
         self.free_a_max = True
         self.trajectory = None
+        self.step_floor_history = []
+        self._unbounded_quadratic = False
 
-    def set_boundary_conditions(self, r0, v0, rf, vf, T):
+    def set_boundary_conditions(self, r0, v0, rf, vf, T, *, lambda_value=None):
         self.r0 = np.array(r0, dtype=np.float64)
         self.v0 = np.array(v0, dtype=np.float64)
         self.rf = np.array(rf, dtype=np.float64)
         self.vf = np.array(vf, dtype=np.float64)
         self.T = T
+        self.lambda_value = lambda_value
+        self.kappa = float(np.linalg.norm(self.rf) / np.linalg.norm(self.r0))
+
+    def initial_guess(self):
+        """Аппроксимация для заданной дальности; число оборотов задаётся явно."""
+        if self.lambda_value is None:
+            raise ValueError('Для автоматического старта задайте lambda_value '
+                             'в set_boundary_conditions или передайте p0_guess')
+        if (not np.isfinite(self.lambda_value) or self.lambda_value <= 0
+                or not np.isfinite(self.kappa) or self.kappa <= 0):
+            raise ValueError('lambda_value и отношение радиусов kappa должны быть положительными')
+        pr0, pv0 = get_initial_adjoint(self.lambda_value, self.kappa)
+        a_raw = max(float(np.linalg.norm(pv0)), 0.1)
+        # Проецируем только автоматически выбранную оценку, не меняя p0_guess пользователя.
+        a_initial = float(np.clip(a_raw, 1e-4, 1.0))
+        self.initial_guess_info = dict(lambda_value=self.lambda_value, kappa=self.kappa,
+                                       a_max_raw=a_raw, a_max_initial=a_initial)
+        return np.hstack((pr0, pv0, a_initial))
 
     def optimal_control(self, pv):
+
+        if self._unbounded_quadratic:
+            return np.asarray(pv, dtype=float)
 
         q = float(np.linalg.norm(pv))
         if q < 1e-14:
@@ -67,7 +90,7 @@ class OptimalControlSolver:
 
         return np.concatenate([drdt, dvdt, dot_pr, dot_pv])
 
-    def integrate_trajectory(self, p0, t_span=None):
+    def integrate_trajectory(self, p0, t_span=None, *, dense_output=False):
         if t_span is None:
             t_span = [0, self.T]
         y0 = np.concatenate([self.r0, self.v0, p0[0:3], p0[3:6]])
@@ -78,6 +101,7 @@ class OptimalControlSolver:
             method='LSODA',
             rtol=1e-9,
             atol=1e-12,
+            dense_output=dense_output,
         )
         return sol
 
@@ -122,11 +146,81 @@ class OptimalControlSolver:
         return np.hstack((self.rf - trajectory.y[0:3, -1],
                           self.vf - trajectory.y[3:6, -1]))
 
+    @staticmethod
+    def peak_quadratic_thrust(trajectory):
+        """Численный максимум |p_v|, с уточнением между узлами интегратора."""
+        peak = float(np.max(np.linalg.norm(trajectory.y[9:12], axis=0)))
+        peak_time = float(trajectory.t[np.argmax(np.linalg.norm(trajectory.y[9:12], axis=0))])
+        for left, right in zip(trajectory.t[:-1], trajectory.t[1:]):
+            candidate = minimize_scalar(
+                lambda t: -float(np.linalg.norm(trajectory.sol(t)[9:12])),
+                bounds=(left, right), method='bounded',
+                options={'xatol': max(1e-14, (right - left) * 1e-10)})
+            if candidate.success and -candidate.fun > peak:
+                peak, peak_time = float(-candidate.fun), float(candidate.x)
+        return peak, peak_time
+
+    def initialize_quadratic(self, p0_guess=None, tol=1e-2):
+        """Уточнить неограниченное решение и поставить A на максимум его тяги."""
+        seed = self.initial_guess() if p0_guess is None else np.asarray(p0_guess, dtype=float)
+        previous_free = self.free_a_max
+        self.initial_quadratic_info = {'status': 'failed'}
+        self.trajectory = None
+        try:
+            self.free_a_max = False
+            self._unbounded_quadratic = True
+            result = least_squares(
+                self.residual_vec, seed[:6], method='trf',
+                xtol=1e-10, ftol=1e-10, gtol=1e-10, max_nfev=200)
+            unbounded = self.integrate_trajectory(result.x, dense_output=True) if result.success else None
+            error = float(np.linalg.norm(self.trajectory_residual(unbounded)))
+        finally:
+            self.free_a_max = previous_free
+            self._unbounded_quadratic = False
+
+        if not result.success or not np.isfinite(error) or error > tol:
+            result.success = False
+            result.message = f'Не принято начальное неограниченное решение: {result.message}; невязка={error}'
+        else:
+            peak, peak_time = self.peak_quadratic_thrust(unbounded)
+            self.initial_quadratic_info.update(unbounded_residual=error,
+                                               peak_thrust=peak, peak_time=peak_time)
+            if not np.isfinite(peak) or peak > 1.0:
+                result.success = False
+                result.message = 'Максимум начальной тяги не укладывается в существующую границу A<=1'
+            else:
+                self.p0 = result.x.copy()
+                self.a_max = max(peak, 1e-4)
+                bounded = self.integrate_trajectory(self.p0)
+                bounded_error = float(np.linalg.norm(self.trajectory_residual(bounded)))
+                deviation = (float(np.max(np.linalg.norm(
+                    bounded.y[:6] - unbounded.sol(bounded.t)[:6], axis=0)))
+                    if np.isfinite(bounded_error) else np.inf)
+                self.initial_quadratic_info.update(
+                    a_max=self.a_max, bounded_residual=bounded_error,
+                    maximum_state_deviation=deviation, verification_tolerance=1e-7)
+                if bounded_error <= tol and deviation <= 1e-7:
+                    self.trajectory = bounded
+                    self.initial_quadratic_info['status'] = 'accepted'
+                    result.fun = self.trajectory_residual(bounded)
+                    result.cost = float(0.5 * np.dot(result.fun, result.fun))
+                else:
+                    result.success = False
+                    result.message = 'Ограничение изменило начальное квадратичное решение сверх допуска проверки'
+
+        # Сохраняем семикомпонентный интерфейс результата для свободного A.
+        result.x = np.r_[result.x, self.a_max]
+        result.jac = np.column_stack((result.jac, np.zeros(6)))
+        result.grad = np.r_[result.grad, 0.0]
+        result.active_mask = np.r_[result.active_mask, 0]
+        return result
+
     def solve(self, p0_guess=None, tol=1e-2):
+        if (self.free_a_max and abs(self.alpha) <= 1e-12
+                and self.func_type in ('mixed', 'quadratic')):
+            return self.initialize_quadratic(p0_guess, tol=tol)
         if p0_guess is None:
-            pr0, pv0 = get_initial_adjoint(0.5, 1.2)
-            a_max_0 = max(np.linalg.norm(pv0), 0.1)
-            p0_guess = np.hstack((pr0, pv0, a_max_0))
+            p0_guess = self.initial_guess()
 
         p0_guess = np.asarray(p0_guess, dtype=float)
         if self.free_a_max:
@@ -142,6 +236,10 @@ class OptimalControlSolver:
             p0_guess,
             method='trf',
             bounds=bounds,
+            # Проверенный профиль: возмущение выше шума интегрирования LSODA.
+            jac='2-point',
+            diff_step=1e-5,
+            x_scale=1.0,
             xtol=1e-10,
             ftol=1e-10,
             gtol=1e-10,
@@ -177,7 +275,8 @@ class OptimalControlSolver:
                             tol=1e-2,
                             h_min=1e-4,
                             h_max=0.2,
-                            p0_initial=None):
+                            p0_initial=None,
+                            h_min_floor=None):
         """
         Адаптивный метод продолжения по параметру alpha (Hamada–Maruta style).
         Возвращает список словарей с ключами 'alpha', 'trajectory', 'a_max'.
@@ -186,6 +285,11 @@ class OptimalControlSolver:
         alpha = alpha_start
         h = h_init
         current_guess = p0_initial
+        hard_floor = h_min * 0.1 if h_min_floor is None else h_min_floor
+        if not (0 < hard_floor <= h_min <= h_max and h_init > 0):
+            raise ValueError('Требуется 0 < h_min_floor <= h_min <= h_max и h_init > 0')
+        local_floor = h_min
+        self.step_floor_history = []
 
 
         self.alpha_history = []
@@ -245,6 +349,10 @@ class OptimalControlSolver:
                     self.err_history.append(err)
                     self.step_log.append((alpha_next, h, True))
                     h = min(h * 1.5, h_max)
+                    if local_floor < h_min and h >= h_min:
+                        self.step_floor_history.append(dict(alpha=alpha, event='restore',
+                                                            floor=h_min))
+                        local_floor = h_min
 
                     logger.info(f"Шаг успешен, новый alpha = {alpha:.4f}, h = {h:.4f}")
                     continue
@@ -255,10 +363,15 @@ class OptimalControlSolver:
             self.err_history.append(1e2)
             self.step_log.append((alpha_next, h, False))
 
-            if h <= h_min * (1 + 1e-12):
-                logger.warning("Шаг уже минимальный и не сходится, метод продолжения остановлен.")
-                break
-            h = max(h * 0.5, h_min)
+            if h <= local_floor * (1 + 1e-12):
+                if h <= hard_floor * (1 + 1e-12):
+                    logger.warning("Достигнут окончательный минимум шага; продолжение остановлено.")
+                    break
+                local_floor = max(hard_floor, min(local_floor * 0.1, h * 0.5))
+                self.step_floor_history.append(dict(alpha=alpha, event='lower',
+                                                    floor=local_floor))
+                logger.info(f"Локально уменьшаем нижний предел шага до {local_floor:.6g}")
+            h = max(h * 0.5, local_floor)
             logger.info(f"Неудача, уменьшаем шаг до {h:.6f}")
 
         if abs(alpha - alpha_end) <= 1e-12:
@@ -411,6 +524,7 @@ class OptimalControlSolver:
         data = {
             "mu": self.mu, "func_type": self.func_type, "alpha": self.alpha, "a_max": self.a_max,
             "free_a_max": self.free_a_max,
+            "lambda_value": self.lambda_value,
             "p0": self.p0.copy(), "r0": self.r0.copy(), "v0": self.v0.copy(),
             "rf": self.rf.copy(), "vf": self.vf.copy(), "T": self.T,
         }
@@ -424,7 +538,8 @@ class OptimalControlSolver:
         solver = OptimalControlSolver(mu=data["mu"], a_max=data["a_max"],
                                       alpha=data["alpha"], func_type=data["func_type"])
         solver.free_a_max = data.get("free_a_max", True)
-        solver.set_boundary_conditions(data["r0"], data["v0"], data["rf"], data["vf"], data["T"])
+        solver.set_boundary_conditions(data["r0"], data["v0"], data["rf"], data["vf"], data["T"],
+                                       lambda_value=data.get('lambda_value'))
         solver.p0 = data["p0"]
         traj = solver.integrate_trajectory(solver.p0)
         if not np.all(np.isfinite(solver.trajectory_residual(traj))):

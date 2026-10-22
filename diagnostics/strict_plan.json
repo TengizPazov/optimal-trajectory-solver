@@ -1,0 +1,20 @@
+[
+  {
+    "id": "equal_strict",
+    "lambda": 0.5,
+    "kappa": 1.0,
+    "seed": "matched",
+    "phase": "full",
+    "tol": 1e-05,
+    "h_min_floor": 0.0001
+  },
+  {
+    "id": "near_out_strict",
+    "lambda": 0.5,
+    "kappa": 1.001,
+    "seed": "matched",
+    "phase": "full",
+    "tol": 1e-05,
+    "h_min_floor": 0.0001
+  }
+]

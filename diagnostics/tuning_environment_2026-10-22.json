@@ -1,0 +1,13 @@
+{
+  "python": "3.11.5 (tags/v3.11.5:cce6ba9, Aug 24 2023, 14:38:34) [MSC v.1936 64 bit (AMD64)]",
+  "platform": "Windows-10-10.0.26200-SP0",
+  "numpy": "2.2.5",
+  "scipy": "1.15.1",
+  "parallel_processes": 3,
+  "blas_threads_per_process": 1,
+  "source_sha256": {
+    "solver.py": "6c868ceb787de33e963f76b945c82cf086d95a9284c43139535a10000c4caebc",
+    "approximations.py": "f1ef5b35630ed077005320d55c3727772e1c7ff43f6aea5c669da1a5d67b297b",
+    "run_continuation.py": "9ce688f0b481be8233492d0cce70e0222999160f82abe1926e790baf627e1977"
+  }
+}

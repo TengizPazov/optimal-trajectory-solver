@@ -45,10 +45,14 @@ def run(output_dir):
     logger.addHandler(log_handler)
     start = time.perf_counter()
     config = dict(alpha_start=0.0, alpha_end=1.0, h_init=0.05,
-                  tol=1e-2, h_min=1e-4, h_max=0.2)
+                  tol=1e-2, h_min=1e-4, h_max=0.2, h_min_floor=1e-5)
     summary = {
         'status': 'failed', 'config': config,
-        'model': {'mu': 1.0, 'kappa': 1.5, 'initial_a_max': 0.01,
+        'corrector': {'profile': 'diff5_tight', 'method': 'trf', 'jac': '2-point',
+                      'diff_step': 1e-5, 'x_scale': 1.0, 'xtol': 1e-10,
+                      'ftol': 1e-10, 'gtol': 1e-10, 'max_nfev': 200,
+                      'applies_to': 'bounded_correction'},
+        'model': {'mu': 1.0, 'lambda_value': 0.5, 'kappa': 1.5, 'initial_a_max': 0.01,
                   'func_type': 'mixed', 'free_a_max': True},
         'environment': {'python': platform.python_version(),
                         'numpy': np.__version__, 'scipy': scipy.__version__,
@@ -60,7 +64,7 @@ def run(output_dir):
         kappa = 1.5
         solver.set_boundary_conditions(
             [1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [-kappa, 0.0, 0.0],
-            [0.0, -1 / np.sqrt(kappa), 0.0], 2 * np.pi * T_a(0.5, kappa))
+            [0.0, -1 / np.sqrt(kappa), 0.0], 2 * np.pi * T_a(0.5, kappa), lambda_value=0.5)
         summary['boundary_conditions'] = {
             key: getattr(solver, key).tolist() for key in ('r0', 'v0', 'rf', 'vf')}
         summary['model']['T'] = solver.T
@@ -72,6 +76,9 @@ def run(output_dir):
         summary['solutions_count'] = len(results)
         summary['attempts'] = len(solver.step_log)
         summary['failed_attempts'] = sum(not row[2] for row in solver.step_log)
+        summary['step_floor_history'] = solver.step_floor_history
+        summary['initial_guess'] = getattr(solver, 'initial_guess_info', None)
+        summary['initial_quadratic'] = getattr(solver, 'initial_quadratic_info', None)
         pd.DataFrame(solver.step_log, columns=['alpha', 'h', 'success']).assign(
             success=lambda df: df.success.astype(int)).to_csv(
                 output_dir / 'step_vs_alpha_data.csv', index=False)

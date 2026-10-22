@@ -1,0 +1,32 @@
+[
+  {
+    "id": "base_repeat__diff5_tight",
+    "geometry": "base_repeat",
+    "profile": {
+      "id": "diff5_tight",
+      "corrector": {
+        "diff_step": 1e-05
+      }
+    },
+    "phase": "full",
+    "seed": "auto",
+    "snap_phase": true,
+    "lambda": 0.5,
+    "kappa": 1.5
+  },
+  {
+    "id": "base_trig__diff5_tight",
+    "geometry": "base_trig",
+    "profile": {
+      "id": "diff5_tight",
+      "corrector": {
+        "diff_step": 1e-05
+      }
+    },
+    "phase": "full",
+    "seed": "auto",
+    "snap_phase": false,
+    "lambda": 0.5,
+    "kappa": 1.5
+  }
+]
