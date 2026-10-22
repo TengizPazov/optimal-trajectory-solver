@@ -1,13 +1,13 @@
 import numpy as np
 import pickle
 import logging
+from pathlib import Path
 from scipy.integrate import solve_ivp
 from scipy.optimize import least_squares
 import matplotlib.pyplot as plt
 import matplotlib.lines as mlines
 from approximations import T_a, get_initial_adjoint
 
-logging.basicConfig(level=logging.INFO, format='%(message)s')
 logger = logging.getLogger(__name__)
 
 
@@ -18,6 +18,7 @@ class OptimalControlSolver:
         self.alpha = alpha
         self.func_type = func_type
         self.free_a_max = True
+        self.trajectory = None
 
     def set_boundary_conditions(self, r0, v0, rf, vf, T):
         self.r0 = np.array(r0, dtype=np.float64)
@@ -101,21 +102,27 @@ class OptimalControlSolver:
             atol=1e-12,
         )
 
-        if not sol.success:
+        res = self.trajectory_residual(sol)
+        if not np.all(np.isfinite(res)):
             logger.info("solve_ivp не сошёлся")
             return np.ones(6) * 1e3
-
-        rf = sol.y[0:3, -1]
-        vf = sol.y[3:6, -1]
-        r_res = self.rf - rf
-        v_res = self.vf - vf
-        res = np.hstack((r_res, v_res))
 
         res_norm = np.linalg.norm(res)
         logger.info(f"α={self.alpha:.3f} | невязка={res_norm:.6e} | a_max={a_max:.6f}")
         return res
 
-    def solve(self, p0_guess=None):
+    def trajectory_residual(self, trajectory):
+        """Невязка только для конечной, успешно интегрированной траектории."""
+        if (trajectory is None or not trajectory.success
+                or len(trajectory.t) == 0
+                or not np.all(np.isfinite(trajectory.t))
+                or not np.all(np.isfinite(trajectory.y))
+                or not np.isclose(trajectory.t[-1], self.T, rtol=1e-10, atol=1e-12)):
+            return np.full(6, np.inf)
+        return np.hstack((self.rf - trajectory.y[0:3, -1],
+                          self.vf - trajectory.y[3:6, -1]))
+
+    def solve(self, p0_guess=None, tol=1e-2):
         if p0_guess is None:
             pr0, pv0 = get_initial_adjoint(0.5, 1.2)
             a_max_0 = max(np.linalg.norm(pv0), 0.1)
@@ -149,7 +156,14 @@ class OptimalControlSolver:
             self.p0 = np.hstack((pr0_opt, pv0_opt))
             self.a_max = a_max_opt
             self.trajectory = self.integrate_trajectory(self.p0)
-            logger.info(f"Успешная оптимизация при α={self.alpha:.3f}, a_max={a_max_opt:.6f}")
+            err = np.linalg.norm(self.trajectory_residual(self.trajectory))
+            if not np.isfinite(err) or err > tol:
+                result.success = False
+                result.message = f"Траектория не прошла проверку: невязка={err}, допуск={tol}"
+                self.trajectory = None
+                logger.warning(result.message)
+            else:
+                logger.info(f"Решение принято при α={self.alpha:.3f}, a_max={a_max_opt:.6f}, невязка={err:.6e}")
         else:
             logger.warning(f"Оптимизация не сошлась при α={self.alpha:.3f}")
             self.trajectory = None
@@ -177,21 +191,24 @@ class OptimalControlSolver:
         self.alpha_history = []
         self.h_history = []
         self.err_history = []
+        self.step_log = []
+        self.continuation_status = {
+            'state': 'initial_failed', 'target_alpha': alpha_end,
+            'reached_alpha': None,
+        }
         self.alpha = alpha
-        res = self.solve(current_guess)
-        if self.trajectory is None:
-            logger.error("Не удалось получить решение для начального alpha")
-            return results
-
-        err = np.linalg.norm(self.residual_vec(self._x_full()))
-        self.step_log = [(alpha, h, True)]
+        res = self.solve(current_guess, tol=tol)
+        err = np.linalg.norm(self.trajectory_residual(self.trajectory))
+        accepted = bool(res.success and np.isfinite(err) and err <= tol)
+        self.step_log.append((alpha, h, accepted))
 
         self.alpha_history.append(alpha)
         self.h_history.append(h)
         self.err_history.append(err)
 
-        if err > tol:
-            logger.warning(f"Начальное решение имеет большую невязку {err:.6e} > {tol}")
+        if not accepted:
+            logger.error("Не удалось получить допустимое решение для начального alpha")
+            return results
 
         results.append({
             'alpha': alpha,
@@ -200,15 +217,16 @@ class OptimalControlSolver:
             'p0': self.p0.copy()
         })
         current_guess = self._x_full()
+        self.continuation_status.update(state='partial', reached_alpha=alpha)
 
         while alpha < alpha_end - 1e-12:
             alpha_next = min(alpha + h, alpha_end)
 
             self.alpha = alpha_next
-            res = self.solve(current_guess)
+            res = self.solve(current_guess, tol=tol)
 
             if self.trajectory is not None and res.success:
-                err = np.linalg.norm(self.residual_vec(self._x_full()))
+                err = np.linalg.norm(self.trajectory_residual(self.trajectory))
 
                 if err <= tol:
                     results.append({
@@ -218,6 +236,7 @@ class OptimalControlSolver:
                         'p0': self.p0.copy()
                     })
                     alpha = alpha_next
+                    self.continuation_status['reached_alpha'] = alpha
                     current_guess = self._x_full()
 
                     
@@ -242,6 +261,8 @@ class OptimalControlSolver:
             h = max(h * 0.5, h_min)
             logger.info(f"Неудача, уменьшаем шаг до {h:.6f}")
 
+        if abs(alpha - alpha_end) <= 1e-12:
+            self.continuation_status['state'] = 'completed'
         return results
 
     def _x_full(self):
@@ -287,9 +308,14 @@ class OptimalControlSolver:
             traj = res['trajectory']
             alpha = res['alpha']
             orig_alpha = self.alpha
+            orig_a_max = self.a_max
             self.alpha = alpha
-            t, thrust = self.compute_thrust_profile(traj)
-            self.alpha = orig_alpha
+            self.a_max = res['a_max']
+            try:
+                t, thrust = self.compute_thrust_profile(traj)
+            finally:
+                self.alpha = orig_alpha
+                self.a_max = orig_a_max
             plt.plot(t, thrust, label=f'α={alpha:.2f}')
         plt.xlabel('t', fontsize=14, fontweight='bold')
         plt.ylabel('|a(t)|', fontsize=14, fontweight='bold')
@@ -321,6 +347,7 @@ class OptimalControlSolver:
 
     #активый/пассивный
     def plot_passive_earth_mars(self, trajectory, filename="earth_mars_segments.png"):
+        output_dir = Path(filename).parent
         r = trajectory.y[0:3]
         pv = trajectory.y[9:12]
         thr = max(1e-4, 1e-3 * self.a_max)
@@ -341,15 +368,17 @@ class OptimalControlSolver:
         if cur_x:
             (active_segments if cur_type == "active" else passive_segments).append((cur_x, cur_y))
 
-        if active_segments:
-            np.savetxt("active_segments.txt", np.vstack([np.column_stack(s) for s in active_segments]))
-        if passive_segments:
-            np.savetxt("passive_segments.txt", np.vstack([np.column_stack(s) for s in passive_segments]))
+        for name, segments in [('active', active_segments), ('passive', passive_segments)]:
+            points = (np.vstack([np.column_stack(s) for s in segments])
+                      if segments else np.empty((0, 2)))
+            np.savetxt(output_dir / f"{name}_segments.txt", points)
 
         theta = np.linspace(0, 2 * np.pi, 400)
         plt.figure(figsize=(8, 8))
-        plt.plot(np.cos(theta), np.sin(theta), '--k', linewidth=2)
-        plt.plot(1.52 * np.cos(theta), 1.52 * np.sin(theta), '-.k', linewidth=2)
+        r_start = np.linalg.norm(self.r0)
+        r_target = np.linalg.norm(self.rf)
+        plt.plot(r_start * np.cos(theta), r_start * np.sin(theta), '--k', linewidth=2)
+        plt.plot(r_target * np.cos(theta), r_target * np.sin(theta), '-.k', linewidth=2)
         for xs, ys in active_segments:
             plt.plot(xs, ys, color='#ff007f', linewidth=3, alpha=0.8)
         for xs, ys in passive_segments:
@@ -374,8 +403,14 @@ class OptimalControlSolver:
 
     #зшслду
     def save_alpha1(self, filepath="alpha1.pkl"):
+        if abs(self.alpha - 1.0) > 1e-12:
+            raise ValueError("save_alpha1 требует alpha=1; используйте save_solution для частичного решения")
+        self.save_solution(filepath)
+
+    def save_solution(self, filepath):
         data = {
             "mu": self.mu, "func_type": self.func_type, "alpha": self.alpha, "a_max": self.a_max,
+            "free_a_max": self.free_a_max,
             "p0": self.p0.copy(), "r0": self.r0.copy(), "v0": self.v0.copy(),
             "rf": self.rf.copy(), "vf": self.vf.copy(), "T": self.T,
         }
@@ -388,7 +423,11 @@ class OptimalControlSolver:
             data = pickle.load(f)
         solver = OptimalControlSolver(mu=data["mu"], a_max=data["a_max"],
                                       alpha=data["alpha"], func_type=data["func_type"])
+        solver.free_a_max = data.get("free_a_max", True)
         solver.set_boundary_conditions(data["r0"], data["v0"], data["rf"], data["vf"], data["T"])
         solver.p0 = data["p0"]
         traj = solver.integrate_trajectory(solver.p0)
+        if not np.all(np.isfinite(solver.trajectory_residual(traj))):
+            raise RuntimeError("Не удалось интегрировать сохранённое решение до конечного времени")
+        solver.trajectory = traj
         return solver, traj
