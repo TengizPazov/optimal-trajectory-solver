@@ -1,5 +1,4 @@
 """Independent integration check of the base quadratic initialization."""
-import hashlib
 import json
 import sys
 from pathlib import Path
@@ -9,17 +8,13 @@ from scipy.integrate import solve_ivp
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from approximations import T_a
-from solver import OptimalControlSolver
+from diagnostics.common import make_solver, source_hashes
 
 
 def main():
     output = Path(sys.argv[1])
     output.mkdir(parents=True, exist_ok=False)
-    solver = OptimalControlSolver(1., .01, 0., 'mixed')
-    solver.set_boundary_conditions(
-        [1., 0., 0.], [0., 1., 0.], [-1.5, 0., 0.],
-        [0., -1. / np.sqrt(1.5), 0.], 2. * np.pi * T_a(.5, 1.5), lambda_value=.5)
+    solver = make_solver({'lambda':.5,'kappa':1.5,'snap_phase':True})
     result = solver.solve()
     if not result.success:
         raise RuntimeError(result.message)
@@ -39,8 +34,7 @@ def main():
                 dop853_peak=peak, dop853_peak_time=peak_time,
                 dop853_maximum_state_deviation=float(np.max(np.linalg.norm(
                     bounded.sol(time)[:6] - unbounded.sol(time)[:6], axis=0))),
-                source_sha256={name: hashlib.sha256((ROOT / name).read_bytes()).hexdigest()
-                               for name in ('solver.py', 'approximations.py', 'run_continuation.py')})
+                source_sha256=source_hashes())
     (output / 'verification.json').write_text(json.dumps(info, indent=2), encoding='utf-8')
     assert bounded.success and unbounded.success
     assert abs(peak - solver.a_max) < 1e-9

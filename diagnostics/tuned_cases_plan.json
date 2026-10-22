@@ -3,22 +3,7 @@
     "id": "base__diff5_tight",
     "geometry": "base",
     "profile": {
-      "id": "diff5_tight",
-      "corrector": {
-        "diff_step": 1e-05,
-        "xtol": 1e-10,
-        "ftol": 1e-10,
-        "gtol": 1e-10,
-        "max_nfev": 200,
-        "x_scale": 1.0,
-        "jac": "2-point"
-      },
-      "continuation": {
-        "step": 0.05,
-        "h_max": 0.2,
-        "h_min": 0.0001,
-        "h_min_floor": 1e-05
-      }
+      "profile_file": "../solver_profile.json"
     },
     "phase": "full",
     "seed": "auto",
@@ -30,22 +15,7 @@
     "id": "inward__diff5_tight",
     "geometry": "inward",
     "profile": {
-      "id": "diff5_tight",
-      "corrector": {
-        "diff_step": 1e-05,
-        "xtol": 1e-10,
-        "ftol": 1e-10,
-        "gtol": 1e-10,
-        "max_nfev": 200,
-        "x_scale": 1.0,
-        "jac": "2-point"
-      },
-      "continuation": {
-        "step": 0.05,
-        "h_max": 0.2,
-        "h_min": 0.0001,
-        "h_min_floor": 1e-05
-      }
+      "profile_file": "../solver_profile.json"
     },
     "phase": "full",
     "seed": "auto",
@@ -57,22 +27,7 @@
     "id": "short_in__diff5_tight",
     "geometry": "short_in",
     "profile": {
-      "id": "diff5_tight",
-      "corrector": {
-        "diff_step": 1e-05,
-        "xtol": 1e-10,
-        "ftol": 1e-10,
-        "gtol": 1e-10,
-        "max_nfev": 200,
-        "x_scale": 1.0,
-        "jac": "2-point"
-      },
-      "continuation": {
-        "step": 0.05,
-        "h_max": 0.2,
-        "h_min": 0.0001,
-        "h_min_floor": 1e-05
-      }
+      "profile_file": "../solver_profile.json"
     },
     "phase": "full",
     "seed": "auto",
@@ -84,22 +39,7 @@
     "id": "kappa_left__diff5_tight",
     "geometry": "kappa_left",
     "profile": {
-      "id": "diff5_tight",
-      "corrector": {
-        "diff_step": 1e-05,
-        "xtol": 1e-10,
-        "ftol": 1e-10,
-        "gtol": 1e-10,
-        "max_nfev": 200,
-        "x_scale": 1.0,
-        "jac": "2-point"
-      },
-      "continuation": {
-        "step": 0.05,
-        "h_max": 0.2,
-        "h_min": 0.0001,
-        "h_min_floor": 1e-05
-      }
+      "profile_file": "../solver_profile.json"
     },
     "phase": "full",
     "seed": "auto",
@@ -112,22 +52,7 @@
     "id": "kappa_right__diff5_tight",
     "geometry": "kappa_right",
     "profile": {
-      "id": "diff5_tight",
-      "corrector": {
-        "diff_step": 1e-05,
-        "xtol": 1e-10,
-        "ftol": 1e-10,
-        "gtol": 1e-10,
-        "max_nfev": 200,
-        "x_scale": 1.0,
-        "jac": "2-point"
-      },
-      "continuation": {
-        "step": 0.05,
-        "h_max": 0.2,
-        "h_min": 0.0001,
-        "h_min_floor": 1e-05
-      }
+      "profile_file": "../solver_profile.json"
     },
     "phase": "full",
     "seed": "auto",
@@ -140,22 +65,7 @@
     "id": "lambda_left__diff5_tight",
     "geometry": "lambda_left",
     "profile": {
-      "id": "diff5_tight",
-      "corrector": {
-        "diff_step": 1e-05,
-        "xtol": 1e-10,
-        "ftol": 1e-10,
-        "gtol": 1e-10,
-        "max_nfev": 200,
-        "x_scale": 1.0,
-        "jac": "2-point"
-      },
-      "continuation": {
-        "step": 0.05,
-        "h_max": 0.2,
-        "h_min": 0.0001,
-        "h_min_floor": 1e-05
-      }
+      "profile_file": "../solver_profile.json"
     },
     "phase": "full",
     "seed": "auto",
@@ -168,22 +78,7 @@
     "id": "lambda_right__diff5_tight",
     "geometry": "lambda_right",
     "profile": {
-      "id": "diff5_tight",
-      "corrector": {
-        "diff_step": 1e-05,
-        "xtol": 1e-10,
-        "ftol": 1e-10,
-        "gtol": 1e-10,
-        "max_nfev": 200,
-        "x_scale": 1.0,
-        "jac": "2-point"
-      },
-      "continuation": {
-        "step": 0.05,
-        "h_max": 0.2,
-        "h_min": 0.0001,
-        "h_min_floor": 1e-05
-      }
+      "profile_file": "../solver_profile.json"
     },
     "phase": "full",
     "seed": "auto",
@@ -196,22 +91,7 @@
     "id": "long_out__diff5_tight",
     "geometry": "long_out",
     "profile": {
-      "id": "diff5_tight",
-      "corrector": {
-        "diff_step": 1e-05,
-        "xtol": 1e-10,
-        "ftol": 1e-10,
-        "gtol": 1e-10,
-        "max_nfev": 200,
-        "x_scale": 1.0,
-        "jac": "2-point"
-      },
-      "continuation": {
-        "step": 0.05,
-        "h_max": 0.2,
-        "h_min": 0.0001,
-        "h_min_floor": 1e-05
-      }
+      "profile_file": "../solver_profile.json"
     },
     "phase": "full",
     "seed": "auto",
@@ -224,22 +104,7 @@
     "id": "multiturn__diff5_tight",
     "geometry": "multiturn",
     "profile": {
-      "id": "diff5_tight",
-      "corrector": {
-        "diff_step": 1e-05,
-        "xtol": 1e-10,
-        "ftol": 1e-10,
-        "gtol": 1e-10,
-        "max_nfev": 200,
-        "x_scale": 1.0,
-        "jac": "2-point"
-      },
-      "continuation": {
-        "step": 0.05,
-        "h_max": 0.2,
-        "h_min": 0.0001,
-        "h_min_floor": 1e-05
-      }
+      "profile_file": "../solver_profile.json"
     },
     "phase": "full",
     "seed": "auto",
@@ -252,22 +117,7 @@
     "id": "near_out_strict__diff5_tight",
     "geometry": "near_out_strict",
     "profile": {
-      "id": "diff5_tight",
-      "corrector": {
-        "diff_step": 1e-05,
-        "xtol": 1e-10,
-        "ftol": 1e-10,
-        "gtol": 1e-10,
-        "max_nfev": 200,
-        "x_scale": 1.0,
-        "jac": "2-point"
-      },
-      "continuation": {
-        "step": 0.05,
-        "h_max": 0.2,
-        "h_min": 0.0001,
-        "h_min_floor": 1e-05
-      }
+      "profile_file": "../solver_profile.json"
     },
     "phase": "full",
     "seed": "auto",
@@ -280,22 +130,7 @@
     "id": "scattered__diff5_tight",
     "geometry": "scattered",
     "profile": {
-      "id": "diff5_tight",
-      "corrector": {
-        "diff_step": 1e-05,
-        "xtol": 1e-10,
-        "ftol": 1e-10,
-        "gtol": 1e-10,
-        "max_nfev": 200,
-        "x_scale": 1.0,
-        "jac": "2-point"
-      },
-      "continuation": {
-        "step": 0.05,
-        "h_max": 0.2,
-        "h_min": 0.0001,
-        "h_min_floor": 1e-05
-      }
+      "profile_file": "../solver_profile.json"
     },
     "phase": "full",
     "seed": "auto",
@@ -308,22 +143,7 @@
     "id": "long_out_strict__diff5_tight",
     "geometry": "long_out_strict",
     "profile": {
-      "id": "diff5_tight",
-      "corrector": {
-        "diff_step": 1e-05,
-        "xtol": 1e-10,
-        "ftol": 1e-10,
-        "gtol": 1e-10,
-        "max_nfev": 200,
-        "x_scale": 1.0,
-        "jac": "2-point"
-      },
-      "continuation": {
-        "step": 0.05,
-        "h_max": 0.2,
-        "h_min": 0.0001,
-        "h_min_floor": 1e-05
-      }
+      "profile_file": "../solver_profile.json"
     },
     "phase": "full",
     "seed": "auto",
@@ -336,22 +156,7 @@
     "id": "multiturn_strict__diff5_tight",
     "geometry": "multiturn_strict",
     "profile": {
-      "id": "diff5_tight",
-      "corrector": {
-        "diff_step": 1e-05,
-        "xtol": 1e-10,
-        "ftol": 1e-10,
-        "gtol": 1e-10,
-        "max_nfev": 200,
-        "x_scale": 1.0,
-        "jac": "2-point"
-      },
-      "continuation": {
-        "step": 0.05,
-        "h_max": 0.2,
-        "h_min": 0.0001,
-        "h_min_floor": 1e-05
-      }
+      "profile_file": "../solver_profile.json"
     },
     "phase": "full",
     "seed": "auto",

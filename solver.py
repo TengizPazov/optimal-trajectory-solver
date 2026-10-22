@@ -7,6 +7,7 @@ from scipy.optimize import least_squares, minimize_scalar
 import matplotlib.pyplot as plt
 import matplotlib.lines as mlines
 from approximations import T_a, get_initial_adjoint
+from solver_settings import DEFAULT_PROFILE
 
 logger = logging.getLogger(__name__)
 
@@ -15,12 +16,20 @@ class OptimalControlSolver:
     def __init__(self, mu: float, a_max: float, alpha: float, func_type: str):
         self.mu = mu
         self.a_max = a_max
+        self.a_max_constructor = a_max
         self.alpha = alpha
         self.func_type = func_type
         self.free_a_max = True
         self.trajectory = None
         self.step_floor_history = []
         self._unbounded_quadratic = False
+        self.corrector_options = dict(DEFAULT_PROFILE['corrector'])
+        self.initial_corrector_options = dict(DEFAULT_PROFILE['initial_quadratic_corrector'])
+
+    def corrector_configuration(self):
+        profile = (DEFAULT_PROFILE['id'] if self.corrector_options == DEFAULT_PROFILE['corrector']
+                   else 'custom')
+        return dict(profile=profile, applies_to='bounded_correction', **self.corrector_options)
 
     def set_boundary_conditions(self, r0, v0, rf, vf, T, *, lambda_value=None):
         self.r0 = np.array(r0, dtype=np.float64)
@@ -44,7 +53,7 @@ class OptimalControlSolver:
         # Проецируем только автоматически выбранную оценку, не меняя p0_guess пользователя.
         a_initial = float(np.clip(a_raw, 1e-4, 1.0))
         self.initial_guess_info = dict(lambda_value=self.lambda_value, kappa=self.kappa,
-                                       a_max_raw=a_raw, a_max_initial=a_initial)
+                                       a_max_seed_raw=a_raw, a_max_seed_bounded=a_initial)
         return np.hstack((pr0, pv0, a_initial))
 
     def optimal_control(self, pv):
@@ -170,8 +179,7 @@ class OptimalControlSolver:
             self.free_a_max = False
             self._unbounded_quadratic = True
             result = least_squares(
-                self.residual_vec, seed[:6], method='trf',
-                xtol=1e-10, ftol=1e-10, gtol=1e-10, max_nfev=200)
+                self.residual_vec, seed[:6], **self.initial_corrector_options)
             unbounded = self.integrate_trajectory(result.x, dense_output=True) if result.success else None
             error = float(np.linalg.norm(self.trajectory_residual(unbounded)))
         finally:
@@ -197,11 +205,12 @@ class OptimalControlSolver:
                     bounded.y[:6] - unbounded.sol(bounded.t)[:6], axis=0)))
                     if np.isfinite(bounded_error) else np.inf)
                 self.initial_quadratic_info.update(
-                    a_max=self.a_max, bounded_residual=bounded_error,
+                    a_max_candidate=self.a_max, bounded_residual=bounded_error,
                     maximum_state_deviation=deviation, verification_tolerance=1e-7)
                 if bounded_error <= tol and deviation <= 1e-7:
                     self.trajectory = bounded
                     self.initial_quadratic_info['status'] = 'accepted'
+                    self.initial_quadratic_info['a_max_accepted'] = self.a_max
                     result.fun = self.trajectory_residual(bounded)
                     result.cost = float(0.5 * np.dot(result.fun, result.fun))
                 else:
@@ -234,17 +243,8 @@ class OptimalControlSolver:
         result = least_squares(
             self.residual_vec,
             p0_guess,
-            method='trf',
             bounds=bounds,
-            # Проверенный профиль: возмущение выше шума интегрирования LSODA.
-            jac='2-point',
-            diff_step=1e-5,
-            x_scale=1.0,
-            xtol=1e-10,
-            ftol=1e-10,
-            gtol=1e-10,
-            max_nfev=200,
-            verbose=0
+            **self.corrector_options
         )
 
         if result.success:
@@ -271,10 +271,10 @@ class OptimalControlSolver:
     def continuation_method(self,
                             alpha_start=0.0,
                             alpha_end=1.0,
-                            h_init=0.05,
+                            h_init=DEFAULT_PROFILE['continuation']['step'],
                             tol=1e-2,
-                            h_min=1e-4,
-                            h_max=0.2,
+                            h_min=DEFAULT_PROFILE['continuation']['h_min'],
+                            h_max=DEFAULT_PROFILE['continuation']['h_max'],
                             p0_initial=None,
                             h_min_floor=None):
         """
@@ -285,7 +285,9 @@ class OptimalControlSolver:
         alpha = alpha_start
         h = h_init
         current_guess = p0_initial
-        hard_floor = h_min * 0.1 if h_min_floor is None else h_min_floor
+        defaults = DEFAULT_PROFILE['continuation']
+        hard_floor = (h_min * defaults['h_min_floor'] / defaults['h_min']
+                      if h_min_floor is None else h_min_floor)
         if not (0 < hard_floor <= h_min <= h_max and h_init > 0):
             raise ValueError('Требуется 0 < h_min_floor <= h_min <= h_max и h_init > 0')
         local_floor = h_min
@@ -525,6 +527,8 @@ class OptimalControlSolver:
             "mu": self.mu, "func_type": self.func_type, "alpha": self.alpha, "a_max": self.a_max,
             "free_a_max": self.free_a_max,
             "lambda_value": self.lambda_value,
+            "corrector_options": dict(self.corrector_options),
+            "initial_corrector_options": dict(self.initial_corrector_options),
             "p0": self.p0.copy(), "r0": self.r0.copy(), "v0": self.v0.copy(),
             "rf": self.rf.copy(), "vf": self.vf.copy(), "T": self.T,
         }
@@ -538,6 +542,8 @@ class OptimalControlSolver:
         solver = OptimalControlSolver(mu=data["mu"], a_max=data["a_max"],
                                       alpha=data["alpha"], func_type=data["func_type"])
         solver.free_a_max = data.get("free_a_max", True)
+        solver.corrector_options = dict(data.get('corrector_options',solver.corrector_options))
+        solver.initial_corrector_options = dict(data.get('initial_corrector_options',solver.initial_corrector_options))
         solver.set_boundary_conditions(data["r0"], data["v0"], data["rf"], data["vf"], data["T"],
                                        lambda_value=data.get('lambda_value'))
         solver.p0 = data["p0"]

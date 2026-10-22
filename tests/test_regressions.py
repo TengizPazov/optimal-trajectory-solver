@@ -114,7 +114,7 @@ class SolverTests(unittest.TestCase):
             seed = s.initial_guess()
         guess.assert_called_once_with(1.3, .72)
         self.assertEqual(seed[-1], 1.0)
-        self.assertGreater(s.initial_guess_info['a_max_raw'], 1.)
+        self.assertGreater(s.initial_guess_info['a_max_seed_raw'], 1.)
 
     def test_automatic_guess_requires_explicit_turn_count(self):
         s = make_solver()
@@ -188,6 +188,8 @@ class SolverTests(unittest.TestCase):
         self.assertAlmostEqual(s.a_max, .06, places=8)
         self.assertLess(np.linalg.norm(s.trajectory_residual(s.trajectory)), 1e-8)
         self.assertLess(s.initial_quadratic_info['maximum_state_deviation'], 1e-7)
+        self.assertAlmostEqual(s.initial_quadratic_info['a_max_accepted'],.06,places=8)
+        self.assertNotIn('a_max',s.initial_quadratic_info)
         self.assertEqual(result.x.shape, (7,))
         self.assertEqual(result.jac.shape, (6, 7))
 

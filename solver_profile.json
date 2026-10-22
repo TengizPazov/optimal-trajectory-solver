@@ -1,0 +1,27 @@
+{
+  "id": "diff5_tight",
+  "corrector": {
+    "method": "trf",
+    "diff_step": 1e-5,
+    "xtol": 1e-10,
+    "ftol": 1e-10,
+    "gtol": 1e-10,
+    "max_nfev": 200,
+    "x_scale": 1.0,
+    "jac": "2-point",
+    "verbose": 0
+  },
+  "initial_quadratic_corrector": {
+    "method": "trf",
+    "xtol": 1e-10,
+    "ftol": 1e-10,
+    "gtol": 1e-10,
+    "max_nfev": 200
+  },
+  "continuation": {
+    "step": 0.05,
+    "h_max": 0.2,
+    "h_min": 1e-4,
+    "h_min_floor": 1e-5
+  }
+}

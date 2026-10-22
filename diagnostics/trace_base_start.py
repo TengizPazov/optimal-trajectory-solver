@@ -1,31 +1,21 @@
 """Paired trace of the existing corrector for one exact base problem."""
-import argparse,hashlib,json,logging,os,sys,time
+import argparse,logging,os,sys,time
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
 os.environ['MPLBACKEND']='Agg'
 sys.path.insert(0,str(ROOT))
 import numpy as np
-from approximations import T_a,get_initial_adjoint
+from approximations import get_initial_adjoint
 import solver as module
 from solver import OptimalControlSolver
-
-
-def write(path,value):
-    def clean(x):
-        if isinstance(x,np.ndarray):return clean(x.tolist())
-        if isinstance(x,np.generic):return clean(x.item())
-        if isinstance(x,dict):return {k:clean(v) for k,v in x.items()}
-        if isinstance(x,(list,tuple)):return [clean(v) for v in x]
-        if isinstance(x,float) and not np.isfinite(x):return None
-        return x
-    path.write_text(json.dumps(clean(value),indent=2,ensure_ascii=False),encoding='utf-8')
+from diagnostics.common import make_solver, save_solutions, source_hashes, write_json as write
 
 
 def main():
     p=argparse.ArgumentParser();p.add_argument('seed',choices=['legacy','actual']);p.add_argument('output',type=Path);p.add_argument('--seconds',type=float,default=None)
     args=p.parse_args();args.output.mkdir(parents=True,exist_ok=False)
     logging.getLogger('solver').setLevel(logging.WARNING)
-    started=time.perf_counter();attempts=[];trajectories={};accepted=[]
+    started=time.perf_counter();attempts=[];accepted=[]
     original=module.least_squares
     class BudgetStop(Exception):pass
     class Trace(OptimalControlSolver):
@@ -56,11 +46,9 @@ def main():
                     y=self.trajectory.y;q=np.linalg.norm(y[9:12],axis=0)
                     row.update(A=self.a_max,p0=self.p0.copy(),residual=float(np.linalg.norm(self.trajectory_residual(self.trajectory))),
                         q_max=float(q.max()),q_initial=float(q[0]),q_min=float(q.min()))
-                    i=len(accepted);accepted.append(dict(alpha=self.alpha,A=self.a_max,p0=self.p0.copy()))
-                    trajectories[f't_{i}']=self.trajectory.t;trajectories[f'y_{i}']=y
-                    np.savez_compressed(args.output/'accepted.npz',**trajectories,
-                        alpha=np.array([r['alpha'] for r in accepted]),
-                        a_max=np.array([r['A'] for r in accepted]),p0=np.array([r['p0'] for r in accepted]))
+                    accepted.append(dict(alpha=self.alpha,a_max=self.a_max,p0=self.p0.copy(),
+                                         trajectory=self.trajectory))
+                    save_solutions(args.output/'accepted.npz',accepted)
                 return res
             except BudgetStop:
                 row.update(accepted=False,budget_stop=True)
@@ -73,9 +61,8 @@ def main():
                 write(args.output/f'attempt_{row["index"]:03}.json',dict(summary=row,evaluations=self.evaluations))
                 attempts.append(row);write(args.output/'attempts.json',attempts)
                 print(args.seed,row['index'],f'alpha={self.alpha:.8f}',row.get('accepted'),row.get('raw',{}).get('status'),round(row['seconds'],2),flush=True)
-    s=Trace(1.,.01,0.,'mixed')
-    T=2*np.pi*T_a(.5,1.5)
-    s.set_boundary_conditions([1.,0.,0.],[0.,1.,0.],[-1.5,0.,0.],[0.,-1/np.sqrt(1.5),0.],T,lambda_value=.5)
+    s=make_solver({'lambda':.5,'kappa':1.5,'snap_phase':True},Trace)
+    T=s.T
     seed=None
     if args.seed=='legacy':
         pr,pv=get_initial_adjoint(.5,1.2);seed=np.r_[pr,pv,max(np.linalg.norm(pv),.1)]
@@ -86,9 +73,9 @@ def main():
     write(args.output/'summary.json',dict(seed=args.seed,status=state,seconds=time.perf_counter()-started,
         accepted_count=len(accepted),accepted_alpha=accepted[-1]['alpha'] if accepted else None,
         attempts=len(attempts),floor_history=s.step_floor_history,T=T,
+        boundary_conditions={name:getattr(s,name) for name in ('r0','v0','rf','vf')},
         seconds_limit=args.seconds,initial_quadratic=getattr(s,'initial_quadratic_info',None),
-        source_sha256={name:hashlib.sha256((ROOT/name).read_bytes()).hexdigest()
-                       for name in ('solver.py','approximations.py','run_continuation.py')}))
+        source_sha256=source_hashes()))
 
 
 if __name__=='__main__':main()

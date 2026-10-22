@@ -1,4 +1,5 @@
 """Compare finite differences at one fixed base checkpoint with tighter integration."""
+import argparse
 import json
 from pathlib import Path
 import sys
@@ -8,19 +9,21 @@ from scipy.integrate import solve_ivp
 
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT))
-from approximations import T_a
-from solver import OptimalControlSolver
+from diagnostics.common import make_solver
 
 
 def main():
-    source=ROOT/'outputs/base-full-quadratic-2026-10-22/accepted.npz'
-    with np.load(source) as data:
-        index=int(np.argmin(abs(data['alpha']-.614278268814087)))
+    parser=argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('solutions',type=Path,help='Base accepted.npz or solutions.npz')
+    parser.add_argument('output',type=Path)
+    parser.add_argument('--alpha',type=float,required=True,help='Nearest saved alpha to examine')
+    args=parser.parse_args()
+    with np.load(args.solutions) as data:
+        index=int(np.argmin(abs(data['alpha']-args.alpha)))
         alpha=float(data['alpha'][index])
         x=np.r_[data['p0'][index],data['a_max'][index]]
-    s=OptimalControlSolver(1.,float(x[-1]),alpha,'mixed')
-    s.set_boundary_conditions([1.,0.,0.],[0.,1.,0.],[-1.5,0.,0.],
-        [0.,-1/np.sqrt(1.5),0.],2*np.pi*T_a(.5,1.5),lambda_value=.5)
+    s=make_solver({'lambda':.5,'kappa':1.5,'snap_phase':True})
+    s.alpha,s.a_max=alpha,float(x[-1])
     def residual(value,method):
         s.a_max=float(value[-1])
         if method=='LSODA': return s.residual_vec(value)
@@ -50,7 +53,7 @@ def main():
     info=dict(alpha=alpha,reference_central_steps=[1e-4,1e-5],
         reference_relative_difference=float(np.linalg.norm(check-ref)/np.linalg.norm(ref)),
         columns=columns,rows=rows)
-    target=Path(sys.argv[1])
+    target=args.output
     target.write_text(json.dumps(info,indent=2),encoding='utf-8')
     print(json.dumps(info,indent=2))
 

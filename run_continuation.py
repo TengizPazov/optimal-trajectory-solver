@@ -16,13 +16,14 @@ import scipy
 
 from approximations import T_a
 from solver import OptimalControlSolver
+from solver_settings import PROFILE_PATH, continuation_defaults
 
 ROOT = Path(__file__).resolve().parent
 
 
 def source_info():
     hashes = {p.name: hashlib.sha256(p.read_bytes()).hexdigest()
-              for p in sorted(ROOT.glob('*.py'))}
+              for p in sorted([*ROOT.glob('*.py'), PROFILE_PATH])}
     try:
         revision = subprocess.check_output(
             ['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True,
@@ -44,15 +45,10 @@ def run(output_dir):
     logger.setLevel(logging.INFO)
     logger.addHandler(log_handler)
     start = time.perf_counter()
-    config = dict(alpha_start=0.0, alpha_end=1.0, h_init=0.05,
-                  tol=1e-2, h_min=1e-4, h_max=0.2, h_min_floor=1e-5)
+    config = dict(alpha_start=0.0, alpha_end=1.0, tol=1e-2, **continuation_defaults())
     summary = {
         'status': 'failed', 'config': config,
-        'corrector': {'profile': 'diff5_tight', 'method': 'trf', 'jac': '2-point',
-                      'diff_step': 1e-5, 'x_scale': 1.0, 'xtol': 1e-10,
-                      'ftol': 1e-10, 'gtol': 1e-10, 'max_nfev': 200,
-                      'applies_to': 'bounded_correction'},
-        'model': {'mu': 1.0, 'lambda_value': 0.5, 'kappa': 1.5, 'initial_a_max': 0.01,
+        'model': {'mu': 1.0, 'lambda_value': 0.5, 'kappa': 1.5,
                   'func_type': 'mixed', 'free_a_max': True},
         'environment': {'python': platform.python_version(),
                         'numpy': np.__version__, 'scipy': scipy.__version__,
@@ -61,6 +57,9 @@ def run(output_dir):
     }
     try:
         solver = OptimalControlSolver(mu=1.0, a_max=0.01, alpha=0.0, func_type='mixed')
+        summary['model']['a_max_constructor'] = solver.a_max_constructor
+        summary['corrector'] = solver.corrector_configuration()
+        summary['initial_quadratic_corrector'] = dict(solver.initial_corrector_options)
         kappa = 1.5
         solver.set_boundary_conditions(
             [1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [-kappa, 0.0, 0.0],
