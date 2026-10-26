@@ -1,44 +1,59 @@
-"""Карта режима «без пассивных участков» по (kappa, угловая дальность).
+"""Карта режима «без пассивных участков» на мелкой двумерной сетке (kappa, угловая дальность).
 
-Для каждой пары решает квадратичную задачу (alpha=0), берёт q_min=min|p_v(t)|:
-пассивной дуги нет, пока alpha < q_min (приближённо alpha*_C ~ q_min), а также A_Q (пик тяги).
-    python map_no_passive.py --out map_np
+Для каждой точки решается квадратичная задача (alpha=0) и считается q_min = min_t |p_v(t)|:
+пассивной дуги нет, пока alpha < q_min (приближённо alpha*_C ~ q_min). Также пишутся A_Q, T.
+Считает параллельно и ДОПИСЫВАЕТ в map.csv (можно прервать и запустить снова).
+
+    python map_no_passive.py --out map_fine                       # сетка по умолчанию 19x25
+    python map_no_passive.py --kmin 1.5 --kmax 2.0 --nk 21 --lmin 0.6 --lmax 0.9 --nl 31 --out zoom
+    python map_no_passive.py --procs 4 --out map_fine
+Затем:  python plot_no_passive_region.py map_fine/map.csv
 """
-import argparse, itertools, json
+import argparse
+from multiprocessing import Pool
 from pathlib import Path
 import numpy as np, pandas as pd
-import matplotlib; matplotlib.use('Agg')
-import matplotlib.pyplot as plt
-from branching_scan import make_solver, quadratic_start, analyse
 
-ap = argparse.ArgumentParser()
-ap.add_argument('--kappas', type=float, nargs='+', default=[1.1, 1.2, 1.35, 1.5, 1.7, 1.9])
-ap.add_argument('--lams', type=float, nargs='+', default=[0.4, 0.5, 0.6, 0.75, 0.9, 1.0])
-ap.add_argument('--out', type=Path, default=Path('map_np'))
-a = ap.parse_args()
-a.out.mkdir(exist_ok=True)
-rows = []
-for k, l in itertools.product(a.kappas, a.lams):
+
+def one(args):
+    k, l = args
+    from branching_scan import make_solver, quadratic_start, analyse
     try:
         s = make_solver(k, l)
         AQ, p0 = quadratic_start(s)
-        r = analyse(s, p0, 0.0, AQ * 1.1)
-        rows.append(dict(kappa=k, lam=l, T=s.T, A_Q=AQ, q_min=r['q_min'], q_max=r['q_max'], status='ok'))
+        r = analyse(s, p0, 0.0, AQ * 1.1, n=20000)
+        return dict(kappa=k, lam=l, T=float(s.T), A_Q=AQ, q_min=r['q_min'], q_max=r['q_max'],
+                    word=r['word'], status='ok')
     except Exception as e:
-        rows.append(dict(kappa=k, lam=l, T=np.nan, A_Q=np.nan, q_min=np.nan, q_max=np.nan, status=str(e)[:60]))
-    print(rows[-1], flush=True)
-    pd.DataFrame(rows).to_csv(a.out / 'map.csv', index=False)
-df = pd.DataFrame(rows)
-fig, axs = plt.subplots(1, 2, figsize=(11, 4.2))
-for ax, col, ttl in zip(axs, ['q_min', 'A_Q'], ['q_min ~ alpha*_C (граница режима без C)', 'A_Q (пик тяги)']):
-    P = df.pivot(index='kappa', columns='lam', values=col)
-    im = ax.imshow(P.values, origin='lower', aspect='auto', cmap='viridis')
-    ax.set_xticks(range(len(P.columns))); ax.set_xticklabels(P.columns)
-    ax.set_yticks(range(len(P.index))); ax.set_yticklabels(P.index)
-    for i in range(P.shape[0]):
-        for j in range(P.shape[1]):
-            v = P.values[i, j]
-            ax.text(j, i, 'нет' if np.isnan(v) else f'{v:.3g}', ha='center', va='center', color='w', fontsize=8)
-    ax.set_xlabel('угловая дальность, обороты'); ax.set_ylabel('kappa'); ax.set_title(ttl, fontsize=10)
-    fig.colorbar(im, ax=ax)
-fig.tight_layout(); fig.savefig(a.out / 'map_no_passive.png', dpi=150)
+        return dict(kappa=k, lam=l, T=np.nan, A_Q=np.nan, q_min=np.nan, q_max=np.nan, word='',
+                    status=str(e)[:80].replace(',', ';').replace('\n', ' '))
+
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument('--kmin', type=float, default=1.1); ap.add_argument('--kmax', type=float, default=2.0)
+    ap.add_argument('--nk', type=int, default=19)
+    ap.add_argument('--lmin', type=float, default=0.4); ap.add_argument('--lmax', type=float, default=1.0)
+    ap.add_argument('--nl', type=int, default=25)
+    ap.add_argument('--procs', type=int, default=2)
+    ap.add_argument('--out', type=Path, default=Path('map_fine'))
+    a = ap.parse_args()
+    a.out.mkdir(exist_ok=True)
+    f = a.out / 'map.csv'
+    done = pd.read_csv(f) if f.exists() else pd.DataFrame(columns=['kappa', 'lam'])
+    have = {(round(r.kappa, 6), round(r.lam, 6)) for r in done.itertuples()}
+    todo = [(round(k, 6), round(l, 6)) for k in np.linspace(a.kmin, a.kmax, a.nk)
+            for l in np.linspace(a.lmin, a.lmax, a.nl) if (round(k, 6), round(l, 6)) not in have]
+    print(f'к расчёту {len(todo)} точек (уже есть {len(have)})', flush=True)
+    rows = done.to_dict('records')
+    with Pool(a.procs) as pool:
+        for i, r in enumerate(pool.imap_unordered(one, todo), 1):
+            rows.append(r)
+            if i % 10 == 0 or i == len(todo):
+                pd.DataFrame(rows).to_csv(f, index=False)
+                print(f'{i}/{len(todo)}', flush=True)
+    pd.DataFrame(rows).to_csv(f, index=False)
+
+
+if __name__ == '__main__':
+    main()
