@@ -1,0 +1,17 @@
+{
+  "A_Q": 0.1628820237839291,
+  "kappa": 1.5,
+  "lam": 0.5,
+  "runs": [
+    {
+      "rho": 1.1,
+      "A": 0.17917022616232203,
+      "status": "completed",
+      "reached_alpha": 0.4,
+      "solutions": 7,
+      "attempts": 8,
+      "failed_attempts": 1,
+      "seconds": 7.57168436050415
+    }
+  ]
+}
