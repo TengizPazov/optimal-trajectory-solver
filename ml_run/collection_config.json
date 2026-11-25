@@ -1,0 +1,61 @@
+{
+  "format": 1,
+  "n_cases": 120,
+  "seed": 42,
+  "ranges": {
+    "mu": [
+      0.9,
+      1.1
+    ],
+    "radius": [
+      0.95,
+      1.05
+    ],
+    "kappa": [
+      1.35,
+      1.65
+    ],
+    "lambda_value": [
+      0.46,
+      0.54
+    ],
+    "time_factor": [
+      0.95,
+      1.05
+    ],
+    "rho": [
+      1.05,
+      1.6
+    ],
+    "v0_tangent_factor": [
+      0.98,
+      1.02
+    ],
+    "vf_tangent_factor": [
+      0.98,
+      1.02
+    ],
+    "v0_radial_factor": [
+      -0.01,
+      0.01
+    ],
+    "vf_radial_factor": [
+      -0.01,
+      0.01
+    ],
+    "relative_inclination_deg": [
+      -3.0,
+      3.0
+    ]
+  },
+  "tol": 0.0001,
+  "alpha_end": 1.0,
+  "time_points": 96,
+  "h_max": 0.025,
+  "source_hashes": {
+    "solver.py": "1320e433273da782a87f1ab5512b343321f3189d5afc197fe42f9c44d2ce0214",
+    "approximations.py": "c77e187a8f77a03b4b54f81bf2e30848c11abdc2a0a0c87e20eb5acfc39cdd89",
+    "solver_settings.py": "119dc9731c64abf5b79e0d4d206b2bd97235969e4ae0b6f778e586f047e44ca9",
+    "solver_profile.json": "fccc237dff824e36a911ca133fcafa8613eaa19776bc59da80fade79861d9ac1"
+  }
+}
